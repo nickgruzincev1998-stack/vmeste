@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Golos+Text:wght@400;500;600&display=swap');
+
+:root {
+  --font-unbounded: 'Unbounded', sans-serif;
+  --font-golos: 'Golos Text', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-golos);
+  background-color: #f5f0e8;
+  color: #1a1a1a;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer utilities {
+  .font-unbounded { font-family: var(--font-unbounded); }
+  .font-golos     { font-family: var(--font-golos); }
+
+  .text-balance { text-wrap: balance; }
+
+  .animate-delay-100 { animation-delay: 100ms; }
+  .animate-delay-200 { animation-delay: 200ms; }
+  .animate-delay-300 { animation-delay: 300ms; }
+  .animate-delay-400 { animation-delay: 400ms; }
+  .animate-delay-500 { animation-delay: 500ms; }
+  .animate-delay-600 { animation-delay: 600ms; }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-mint text-forest font-golos font-semibold px-6 py-3 rounded-full transition-all duration-200 hover:bg-cream hover:-translate-y-0.5 active:scale-95;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 border border-white/30 text-cream font-golos font-semibold px-6 py-3 rounded-full transition-all duration-200 hover:border-white/70 hover:bg-white/10 active:scale-95;
+  }
+
+  .btn-dark {
+    @apply inline-flex items-center justify-center gap-2 bg-forest text-cream font-golos font-semibold px-6 py-3 rounded-full transition-all duration-200 hover:bg-moss hover:-translate-y-0.5 active:scale-95;
+  }
+
+  .card {
+    @apply bg-cream rounded-2xl border border-forest/10 overflow-hidden transition-transform duration-200 hover:-translate-y-1;
+  }
+
+  .section-label {
+    @apply text-xs font-golos font-semibold uppercase tracking-widest text-sage;
+  }
+}

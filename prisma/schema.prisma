@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+  
+
+model User {
+  id            String   @id @default(cuid())
+  clerkId       String   @unique
+  username      String   @unique
+  name          String
+  email         String   @unique
+  avatar        String?
+  bio           String?
+  age           Int?
+  city          String?
+  level         Int      @default(1)
+  xp            Int      @default(0)
+  rating        Float    @default(5.0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  activities     Activity[]
+  participations Participation[]
+  reviewsGiven   Review[]        @relation("Reviewer")
+  reviewsReceived Review[]       @relation("Reviewee")
+  notifications  Notification[]
+}
+
+model Activity {
+  id              String   @id @default(cuid())
+  title           String
+  description     String
+  categoryId      String
+  creatorId       String
+  date            DateTime
+  placeName       String
+  difficulty      String   @default("beginner")
+  maxParticipants Int      @default(10)
+  status          String   @default("active")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  creator        User            @relation(fields: [creatorId], references: [id])
+  category       Category        @relation(fields: [categoryId], references: [id])
+  participants   Participation[]
+}
+
+model Category {
+  id         String     @id @default(cuid())
+  name       String
+  nameRu     String
+  icon       String
+  slug       String     @unique
+  activities Activity[]
+}
+
+model Participation {
+  id         String   @id @default(cuid())
+  userId     String
+  activityId String
+  status     String   @default("active")
+  joinedAt   DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id])
+  activity   Activity @relation(fields: [activityId], references: [id])
+
+  @@unique([userId, activityId])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  reviewerId String
+  revieweeId String
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  reviewer   User @relation("Reviewer", fields: [reviewerId], references: [id])
+  reviewee   User @relation("Reviewee", fields: [revieweeId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User @relation(fields: [userId], references: [id])
+}
