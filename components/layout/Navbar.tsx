@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Menu, X, MapPin, Compass, Home, Plus } from "lucide-react";
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs/components";
+import { UserButton, useAuth } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -16,6 +16,7 @@ const navLinks = [
 export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { isSignedIn } = useAuth();
 
   return (
     <nav className="sticky top-0 z-50 bg-forest/95 backdrop-blur-md border-b border-white/10">
@@ -51,17 +52,16 @@ export default function Navbar() {
               <Plus size={16} />
               Создать событие
             </Link>
-            <SignedOut>
+            {isSignedIn ? (
+              <UserButton />
+            ) : (
               <Link
                 href="/sign-in"
                 className="text-cream/70 hover:text-cream text-sm font-golos font-medium transition-colors"
               >
                 Войти
               </Link>
-            </SignedOut>
-            <SignedIn>
-              <UserButton afterSignOutUrl="/" />
-            </SignedIn>
+            )}
           </div>
 
           <button
@@ -101,7 +101,11 @@ export default function Navbar() {
                 <Plus size={16} />
                 Создать событие
               </Link>
-              <SignedOut>
+              {isSignedIn ? (
+                <div className="flex justify-center">
+                  <UserButton />
+                </div>
+              ) : (
                 <Link
                   href="/sign-in"
                   onClick={() => setMenuOpen(false)}
@@ -109,12 +113,7 @@ export default function Navbar() {
                 >
                   Войти
                 </Link>
-              </SignedOut>
-              <SignedIn>
-                <div className="flex justify-center">
-                  <UserButton afterSignOutUrl="/" />
-                </div>
-              </SignedIn>
+              )}
             </div>
           </div>
         </div>
