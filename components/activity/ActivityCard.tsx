@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { Calendar, MapPin, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Activity, Difficulty } from "@/types";
 
 const difficultyLabel: Record<Difficulty, { label: string; cls: string }> = {
-  beginner:     { label: "Новичок",    cls: "bg-green-100 text-green-800" },
-  intermediate: { label: "Средний",   cls: "bg-yellow-100 text-yellow-800" },
-  advanced:     { label: "Продвинутый",cls: "bg-red-100 text-red-800" },
+  beginner:     { label: "Новичок",     cls: "bg-green-100 text-green-800" },
+  intermediate: { label: "Средний",     cls: "bg-yellow-100 text-yellow-800" },
+  advanced:     { label: "Продвинутый", cls: "bg-red-100 text-red-800" },
 };
 
 function formatDate(iso: string) {
@@ -23,10 +25,22 @@ interface Props {
 }
 
 export default function ActivityCard({ activity, className }: Props) {
+  const router = useRouter();
+  const { isSignedIn } = useAuth();
+
   const spotsLeft = activity.maxParticipants - activity.currentParticipants;
   const isFull = spotsLeft <= 0;
   const pct = Math.round((activity.currentParticipants / activity.maxParticipants) * 100);
   const diff = difficultyLabel[activity.difficulty];
+
+  function handleJoin(e: React.MouseEvent) {
+    e.preventDefault();
+    if (!isSignedIn) {
+      router.push("/sign-in");
+      return;
+    }
+    router.push(`/activities/${activity.id}`);
+  }
 
   return (
     <Link href={`/activities/${activity.id}`} className={cn("card block group", className)}>
@@ -87,14 +101,17 @@ export default function ActivityCard({ activity, className }: Props) {
             </div>
             <span className="text-xs text-bark truncate max-w-[100px]">{activity.creator.name}</span>
           </div>
-          <span className={cn(
-            "text-xs font-golos font-semibold px-3 py-1.5 rounded-full transition-colors",
-            isFull
-              ? "bg-sand text-bark cursor-not-allowed"
-              : "bg-forest text-cream group-hover:bg-moss"
-          )}>
-            {isFull ? "Занято" : "Записаться"}
-          </span>
+          <button
+            onClick={handleJoin}
+            className={cn(
+              "text-xs font-golos font-semibold px-3 py-1.5 rounded-full transition-colors",
+              isFull
+                ? "bg-sand text-bark cursor-not-allowed"
+                : "bg-forest text-cream group-hover:bg-moss"
+            )}
+          >
+            {isFull ? "Занято" : isSignedIn ? "Записаться" : "Войти"}
+          </button>
         </div>
       </div>
     </Link>
