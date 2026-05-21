@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { ArrowLeft, Calendar, MapPin, Users, Star, ChevronRight } from "lucide-react";
-import { MOCK_ACTIVITIES, CATEGORIES } from "@/types";
+import { MOCK_ACTIVITIES } from "@/types";
 import { cn } from "@/lib/utils";
 
 const diffLabel: Record<string, { label: string; cls: string }> = {
   beginner:     { label: "Новичок",     cls: "bg-green-100 text-green-800" },
-  intermediate: { label: "Средний",    cls: "bg-yellow-100 text-yellow-800" },
+  intermediate: { label: "Средний",     cls: "bg-yellow-100 text-yellow-800" },
   advanced:     { label: "Продвинутый", cls: "bg-red-100 text-red-800" },
 };
 
@@ -18,22 +20,32 @@ function formatDate(iso: string) {
   });
 }
 
-// Mock avatars for participants
 const mockParticipants = [
-  { name: "Алёна К.", initial: "А", color: "bg-sage" },
+  { name: "Алёна К.",   initial: "А", color: "bg-sage" },
   { name: "Дмитрий В.", initial: "Д", color: "bg-ember" },
-  { name: "Маша Т.", initial: "М", color: "bg-moss" },
-  { name: "Петр С.", initial: "П", color: "bg-bark" },
-  { name: "Юля Н.", initial: "Ю", color: "bg-mint text-forest" },
+  { name: "Маша Т.",    initial: "М", color: "bg-moss" },
+  { name: "Петр С.",    initial: "П", color: "bg-bark" },
+  { name: "Юля Н.",     initial: "Ю", color: "bg-mint text-forest" },
 ];
 
 export default function ActivityDetailPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
+  const { isSignedIn } = useAuth();
   const activity = MOCK_ACTIVITIES.find((a) => a.id === params.id) ?? MOCK_ACTIVITIES[0];
   const [joined, setJoined] = useState(false);
+
   const spotsLeft = activity.maxParticipants - activity.currentParticipants;
   const isFull = spotsLeft <= 0;
   const diff = diffLabel[activity.difficulty];
   const related = MOCK_ACTIVITIES.filter((a) => a.id !== activity.id && a.category.slug === activity.category.slug).slice(0, 3);
+
+  function handleJoin() {
+    if (!isSignedIn) {
+      router.push("/sign-in");
+      return;
+    }
+    if (!isFull) setJoined(!joined);
+  }
 
   return (
     <div className="min-h-screen bg-cream">
@@ -106,7 +118,7 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
                     </div>
                     <div className="ml-auto flex items-center gap-1 text-amber-500 text-xs">
                       <Star size={12} fill="currentColor" />
-                      <span className="text-bark">4.{Math.floor(Math.random() * 2) + 8}</span>
+                      <span className="text-bark">4.8</span>
                     </div>
                   </div>
                 ))}
@@ -118,11 +130,12 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
           <div className="space-y-4">
             {/* Join card */}
             <div className="bg-white rounded-3xl border border-forest/10 p-6 sticky top-24">
-              {/* Progress */}
               <div className="mb-5">
-                <div className="flex justify-between text-xs text-bark mb-2">
-                  <span className="flex items-center gap-1"><Users size={12} /> {activity.currentParticipants} участников</span>
-                  <span className={isFull ? "text-red-600 font-semibold" : "text-sage font-semibold"}>
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-1 text-xs text-bark">
+                    <Users size={12} /> {activity.currentParticipants} участников
+                  </div>
+                  <span className={cn("text-xs font-golos font-semibold", isFull ? "text-red-600" : "text-sage")}>
                     {isFull ? "Мест нет" : `${spotsLeft} свободных`}
                   </span>
                 </div>
@@ -135,7 +148,7 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
               </div>
 
               <button
-                onClick={() => !isFull && setJoined(!joined)}
+                onClick={handleJoin}
                 className={cn(
                   "w-full py-4 rounded-2xl font-unbounded font-bold text-sm transition-all duration-200 active:scale-95",
                   joined
@@ -145,12 +158,24 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
                     : "bg-forest text-cream hover:bg-moss"
                 )}
               >
-                {joined ? "✓ Ты записан" : isFull ? "Мест нет" : "Записаться"}
+                {joined
+                  ? "✓ Ты записан"
+                  : isFull
+                  ? "Мест нет"
+                  : isSignedIn
+                  ? "Записаться"
+                  : "Войти чтобы записаться"}
               </button>
 
               {joined && (
                 <p className="text-center text-xs text-sage mt-3 font-golos">
                   Организатор получил уведомление 🎉
+                </p>
+              )}
+
+              {!isSignedIn && !isFull && (
+                <p className="text-center text-xs text-bark mt-3 font-golos">
+                  Нужна регистрация для записи
                 </p>
               )}
             </div>
