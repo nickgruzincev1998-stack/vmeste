@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { MapPin } from "lucide-react";
 
 interface Suggestion {
@@ -22,7 +22,6 @@ export default function AddressInput({ value, onChange, placeholder }: Props) {
   const timer = useRef<NodeJS.Timeout>();
   const ref = useRef<HTMLDivElement>(null);
 
-  // Закрыть при клике вне
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
