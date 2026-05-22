@@ -28,7 +28,7 @@ const YandexMap = forwardRef<YandexMapHandle, Props>(({ activities = [], onMapRe
 
   useImperativeHandle(ref, () => ({
     async searchAddress(address: string) {
-      if (!window.ymaps) return null;
+      if (!window.ymaps || !mapInstance.current) return null;
       try {
         const res = await window.ymaps.geocode(address, { results: 1 });
         const obj = res.geoObjects.get(0);
@@ -74,6 +74,8 @@ const YandexMap = forwardRef<YandexMapHandle, Props>(({ activities = [], onMapRe
         });
 
         onMapReady?.();
+        // Геокодер готов после инициализации карты
+        window.ymapsReady = true;
       });
     }
 
