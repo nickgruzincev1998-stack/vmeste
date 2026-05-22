@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, X, MapPin, Compass, Home, Plus, User } from "lucide-react";
+import { Menu, X, MapPin, Compass, Home, Plus, User, Users } from "lucide-react";
 import { UserButton, useAuth } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/layout/NotificationBell";
