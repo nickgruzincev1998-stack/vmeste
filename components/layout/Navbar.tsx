@@ -9,9 +9,10 @@ import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/layout/NotificationBell";
 
 const navLinks = [
-  { href: "/feed",    label: "Лента", icon: Home },
-  { href: "/explore", label: "Найти", icon: Compass },
-  { href: "/map",     label: "Карта", icon: MapPin },
+  { href: "/feed",    label: "Лента",  icon: Home },
+  { href: "/explore", label: "Найти",  icon: Compass },
+  { href: "/map",     label: "Карта",  icon: MapPin },
+  { href: "/about",   label: "О нас",  icon: Users },  // ← добавь
 ];
 
 export default function Navbar() {
