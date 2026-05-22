@@ -1,12 +1,11 @@
 "use client";
 
 import ChatRoom from "@/components/chat/ChatRoom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { ArrowLeft, Calendar, MapPin, Users, Star, ChevronRight } from "lucide-react";
-import { MOCK_ACTIVITIES } from "@/types";
 import { cn } from "@/lib/utils";
 
 const diffLabel: Record<string, { label: string; cls: string }> = {
@@ -21,36 +20,87 @@ function formatDate(iso: string) {
   });
 }
 
-const mockParticipants = [
-  { name: "Алёна К.",   initial: "А", color: "bg-sage" },
-  { name: "Дмитрий В.", initial: "Д", color: "bg-ember" },
-  { name: "Маша Т.",    initial: "М", color: "bg-moss" },
-  { name: "Петр С.",    initial: "П", color: "bg-bark" },
-  { name: "Юля Н.",     initial: "Ю", color: "bg-mint text-forest" },
-];
-
 export default function ActivityDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { isSignedIn } = useAuth();
-  const activity = MOCK_ACTIVITIES.find((a) => a.id === params.id) ?? MOCK_ACTIVITIES[0];
-  const [joined, setJoined] = useState(false);
+  const [activity, setActivity] = useState<any>(null);
+  const [loading, setLoading]   = useState(true);
+  const [joined, setJoined]     = useState(false);
+  const [joining, setJoining]   = useState(false);
+  const [dbUserId, setDbUserId] = useState<string | undefined>(undefined);
 
-  const spotsLeft = activity.maxParticipants - activity.currentParticipants;
-  const isFull = spotsLeft <= 0;
-  const diff = diffLabel[activity.difficulty];
-  const related = MOCK_ACTIVITIES.filter((a) => a.id !== activity.id && a.category.slug === activity.category.slug).slice(0, 3);
+  useEffect(() => {
+    // Загружаем событие
+    fetch(`/api/activities/${params.id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) router.push("/feed");
+        else setActivity(data);
+      })
+      .catch(() => router.push("/feed"))
+      .finally(() => setLoading(false));
 
-  function handleJoin() {
-    if (!isSignedIn) {
-      router.push("/sign-in");
-      return;
+    // Загружаем текущего пользователя
+    if (isSignedIn) {
+      fetch("/api/users/me")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.id) setDbUserId(data.id);
+        });
     }
-    if (!isFull) setJoined(!joined);
+  }, [params.id, isSignedIn]);
+
+  async function handleJoin() {
+    if (!isSignedIn) { router.push("/sign-in"); return; }
+    if (!activity) return;
+
+    setJoining(true);
+    try {
+      if (joined) {
+        await fetch(`/api/activities/${params.id}/join`, { method: "DELETE" });
+        setJoined(false);
+        setActivity((prev: any) => ({
+          ...prev,
+          _count: { ...prev._count, participants: prev._count.participants - 1 },
+        }));
+      } else {
+        const res = await fetch(`/api/activities/${params.id}/join`, { method: "POST" });
+        const data = await res.json();
+        if (data.success) {
+          setJoined(true);
+          setActivity((prev: any) => ({
+            ...prev,
+            _count: { ...prev._count, participants: prev._count.participants + 1 },
+          }));
+        } else {
+          alert(data.error || "Ошибка");
+        }
+      }
+    } finally {
+      setJoining(false);
+    }
   }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-2 border-sage border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-bark font-golos">Загрузка…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!activity) return null;
+
+  const currentParticipants = activity._count?.participants ?? 0;
+  const spotsLeft = activity.maxParticipants - currentParticipants;
+  const isFull = spotsLeft <= 0;
+  const diff = diffLabel[activity.difficulty] ?? { label: activity.difficulty, cls: "bg-gray-100 text-gray-800" };
 
   return (
     <div className="min-h-screen bg-cream">
-      {/* Back */}
       <div className="bg-forest py-4 px-4">
         <div className="max-w-4xl mx-auto">
           <Link href="/feed" className="flex items-center gap-2 text-cream/70 hover:text-cream text-sm transition-colors font-golos">
@@ -66,10 +116,10 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
           <div className="lg:col-span-2 space-y-6">
             {/* Cover */}
             <div className="h-64 rounded-3xl bg-forest flex items-center justify-center relative overflow-hidden">
-              <span className="text-8xl">{activity.category.icon}</span>
+              <span className="text-8xl">{activity.category?.icon ?? "🎯"}</span>
               <div className="absolute top-4 left-4 flex gap-2">
                 <span className="text-xs font-golos font-semibold px-3 py-1.5 rounded-full bg-mint/20 text-sage">
-                  {activity.category.nameRu}
+                  {activity.category?.nameRu ?? "Активность"}
                 </span>
                 <span className={cn("text-xs font-golos font-semibold px-3 py-1.5 rounded-full", diff.cls)}>
                   {diff.label}
@@ -93,7 +143,7 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
                 </div>
                 <div className="flex items-start gap-3 text-sm text-bark">
                   <Users size={18} className="mt-0.5 flex-shrink-0 text-sage" />
-                  <span>{activity.currentParticipants} из {activity.maxParticipants} участников · {isFull ? "мест нет" : `осталось ${spotsLeft}`}</span>
+                  <span>{currentParticipants} из {activity.maxParticipants} · {isFull ? "мест нет" : `осталось ${spotsLeft}`}</span>
                 </div>
               </div>
             </div>
@@ -101,47 +151,24 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
             {/* Description */}
             <div className="bg-white rounded-2xl p-6 border border-forest/8">
               <h2 className="font-unbounded font-bold text-forest text-base mb-3">Описание</h2>
-              <p className="text-bark leading-relaxed text-sm">{activity.description}</p>
-            </div>
-
-            {/* Participants */}
-            <div className="bg-white rounded-2xl p-6 border border-forest/8">
-              <h2 className="font-unbounded font-bold text-forest text-base mb-4">Участники</h2>
-              <div className="space-y-3">
-                {mockParticipants.slice(0, activity.currentParticipants).map((p) => (
-                  <div key={p.name} className="flex items-center gap-3">
-                    <div className={cn("w-9 h-9 rounded-full flex items-center justify-center text-cream text-sm font-bold", p.color)}>
-                      {p.initial}
-                    </div>
-                    <div>
-                      <div className="text-sm font-golos font-medium text-forest">{p.name}</div>
-                      <div className="text-xs text-bark">Участник</div>
-                    </div>
-                    <div className="ml-auto flex items-center gap-1 text-amber-500 text-xs">
-                      <Star size={12} fill="currentColor" />
-                      <span className="text-bark">4.8</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <p className="text-bark leading-relaxed text-sm">{activity.description || "Описание не указано"}</p>
             </div>
 
             {/* Chat */}
             <ChatRoom
               activityId={activity.id}
-              currentUserId={undefined}
+              currentUserId={dbUserId}
               isParticipant={joined}
             />
           </div>
 
           {/* Sidebar */}
           <div className="space-y-4">
-            {/* Join card */}
             <div className="bg-white rounded-3xl border border-forest/10 p-6 sticky top-24">
               <div className="mb-5">
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center gap-1 text-xs text-bark">
-                    <Users size={12} /> {activity.currentParticipants} участников
+                    <Users size={12} /> {currentParticipants} участников
                   </div>
                   <span className={cn("text-xs font-golos font-semibold", isFull ? "text-red-600" : "text-sage")}>
                     {isFull ? "Мест нет" : `${spotsLeft} свободных`}
@@ -150,15 +177,16 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
                 <div className="h-2 bg-sand rounded-full overflow-hidden">
                   <div
                     className={cn("h-full rounded-full", isFull ? "bg-red-400" : "bg-mint")}
-                    style={{ width: `${Math.round((activity.currentParticipants / activity.maxParticipants) * 100)}%` }}
+                    style={{ width: `${Math.round((currentParticipants / activity.maxParticipants) * 100)}%` }}
                   />
                 </div>
               </div>
 
               <button
                 onClick={handleJoin}
+                disabled={joining || (isFull && !joined)}
                 className={cn(
-                  "w-full py-4 rounded-2xl font-unbounded font-bold text-sm transition-all duration-200 active:scale-95",
+                  "w-full py-4 rounded-2xl font-unbounded font-bold text-sm transition-all duration-200 active:scale-95 disabled:opacity-50",
                   joined
                     ? "bg-mint/20 text-sage border-2 border-mint"
                     : isFull
@@ -166,13 +194,7 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
                     : "bg-forest text-cream hover:bg-moss"
                 )}
               >
-                {joined
-                  ? "✓ Ты записан"
-                  : isFull
-                  ? "Мест нет"
-                  : isSignedIn
-                  ? "Записаться"
-                  : "Войти чтобы записаться"}
+                {joining ? "Загрузка…" : joined ? "✓ Ты записан" : isFull ? "Мест нет" : isSignedIn ? "Записаться" : "Войти чтобы записаться"}
               </button>
 
               {joined && (
@@ -180,58 +202,38 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
                   Организатор получил уведомление 🎉
                 </p>
               )}
-
-              {!isSignedIn && !isFull && (
-                <p className="text-center text-xs text-bark mt-3 font-golos">
-                  Нужна регистрация для записи
-                </p>
-              )}
             </div>
 
             {/* Organizer */}
-            <div className="bg-white rounded-3xl border border-forest/10 p-5">
-              <div className="text-xs font-semibold text-bark uppercase tracking-wide mb-4">Организатор</div>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-sage flex items-center justify-center text-cream font-bold text-lg">
-                  {activity.creator.name[0]}
-                </div>
-                <div className="flex-1">
-                  <div className="font-golos font-semibold text-forest text-sm">{activity.creator.name}</div>
-                  <div className="flex items-center gap-1 text-amber-500 text-xs mt-0.5">
-                    <Star size={11} fill="currentColor" />
-                    <span className="text-bark">{activity.creator.rating.toFixed(1)}</span>
+            {activity.creator && (
+              <div className="bg-white rounded-3xl border border-forest/10 p-5">
+                <div className="text-xs font-semibold text-bark uppercase tracking-wide mb-4">Организатор</div>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-sage flex items-center justify-center text-cream font-bold text-lg overflow-hidden">
+                    {activity.creator.avatar ? (
+                      <img src={activity.creator.avatar} alt={activity.creator.name} className="w-full h-full object-cover" />
+                    ) : (
+                      activity.creator.name[0]
+                    )}
                   </div>
+                  <div className="flex-1">
+                    <div className="font-golos font-semibold text-forest text-sm">{activity.creator.name}</div>
+                    <div className="flex items-center gap-1 text-amber-500 text-xs mt-0.5">
+                      <Star size={11} fill="currentColor" />
+                      <span className="text-bark">{activity.creator.rating?.toFixed(1) ?? "5.0"}</span>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/profile/${activity.creator.username}`}
+                    className="text-xs text-sage hover:text-forest font-semibold flex items-center gap-0.5 transition-colors"
+                  >
+                    Профиль <ChevronRight size={12} />
+                  </Link>
                 </div>
-                <Link
-                  href={`/profile/${activity.creator.username}`}
-                  className="text-xs text-sage hover:text-forest font-semibold flex items-center gap-0.5 transition-colors"
-                >
-                  Профиль <ChevronRight size={12} />
-                </Link>
               </div>
-            </div>
+            )}
           </div>
         </div>
-
-        {/* Related */}
-        {related.length > 0 && (
-          <div className="mt-16">
-            <h2 className="font-unbounded font-bold text-forest text-xl mb-6">Похожие события</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {related.map((a) => (
-                <Link key={a.id} href={`/activities/${a.id}`} className="card block group">
-                  <div className="h-28 bg-forest flex items-center justify-center text-5xl">
-                    {a.category.icon}
-                  </div>
-                  <div className="p-4">
-                    <div className="font-unbounded font-bold text-forest text-sm group-hover:text-sage transition-colors line-clamp-2">{a.title}</div>
-                    <div className="text-xs text-bark mt-2">{a.placeName}</div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
