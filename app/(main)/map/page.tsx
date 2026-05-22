@@ -1,8 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import ActivityCard from "@/components/activity/ActivityCard";
-import { MOCK_ACTIVITIES } from "@/types";
 
 const YandexMap = dynamic(() => import("@/components/map/YandexMap"), {
   ssr: false,
@@ -13,23 +13,21 @@ const YandexMap = dynamic(() => import("@/components/map/YandexMap"), {
   ),
 });
 
-// Координаты для событий (Москва)
-const activityCoords: Record<string, [number, number]> = {
-  "1": [55.751, 37.628],
-  "2": [55.763, 37.589],
-  "3": [55.748, 37.542],
-  "4": [55.794, 37.678],
-  "5": [55.731, 37.601],
-  "6": [55.788, 37.745],
-};
-
 export default function MapPage() {
-  const mapActivities = MOCK_ACTIVITIES.map((a) => ({
+  const [activities, setActivities] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/activities")
+      .then((r) => r.json())
+      .then((data) => setActivities(Array.isArray(data) ? data : []));
+  }, []);
+
+  const mapActivities = activities.map((a) => ({
     id: a.id,
     title: a.title,
-    lat: activityCoords[a.id]?.[0] ?? 55.751,
-    lng: activityCoords[a.id]?.[1] ?? 37.618,
-    icon: a.category.icon,
+    lat: a.lat ?? 55.751,
+    lng: a.lng ?? 37.618,
+    icon: a.category?.icon ?? "📍",
   }));
 
   return (
@@ -47,11 +45,31 @@ export default function MapPage() {
         </div>
 
         <h2 className="font-unbounded font-bold text-forest text-xl mb-5">Все события</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {MOCK_ACTIVITIES.map((a) => (
-            <ActivityCard key={a.id} activity={a} />
-          ))}
-        </div>
+        {activities.length > 0 ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {activities.map((a) => (
+              <ActivityCard key={a.id} activity={{
+                id: a.id,
+                title: a.title,
+                description: a.description,
+                category: a.category,
+                date: a.date,
+                placeName: a.placeName,
+                difficulty: a.difficulty,
+                maxParticipants: a.maxParticipants,
+                currentParticipants: a._count?.participants ?? 0,
+                creator: a.creator,
+              }} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-20">
+            <div className="text-6xl mb-4">🗺️</div>
+            <h3 className="font-unbounded font-bold text-forest text-xl mb-2">Событий пока нет</h3>
+            <p className="text-bark text-sm mb-6">Создай первое событие!</p>
+            <a href="/activities/create" className="btn-dark inline-flex">Создать событие</a>
+          </div>
+        )}
       </div>
     </div>
   );
