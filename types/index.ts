@@ -35,20 +35,18 @@ export interface User {
 }
 
 export const CATEGORIES: Category[] = [
-  { id: "1",  slug: "cycling",      nameRu: "Велосипед",       name: "Cycling",      icon: "🚴", color: "bg-green-100 text-green-800" },
-  { id: "2",  slug: "running",      nameRu: "Бег",             name: "Running",      icon: "🏃", color: "bg-orange-100 text-orange-800" },
-  { id: "3",  slug: "rollerblading",nameRu: "Ролики",          name: "Rollerblading",icon: "🛼", color: "bg-pink-100 text-pink-800" },
-  { id: "4",  slug: "hiking",       nameRu: "Хайкинг",         name: "Hiking",       icon: "🥾", color: "bg-amber-100 text-amber-800" },
-  { id: "5",  slug: "glamping",     nameRu: "Глэмпинг",        name: "Glamping",     icon: "⛺", color: "bg-teal-100 text-teal-800" },
-  { id: "6",  slug: "gym",          nameRu: "Тренажёрный зал", name: "Gym",          icon: "🏋️", color: "bg-red-100 text-red-800" },
-  { id: "7",  slug: "yoga",         nameRu: "Йога",            name: "Yoga",         icon: "🧘", color: "bg-purple-100 text-purple-800" },
-  { id: "8",  slug: "football",     nameRu: "Футбол",          name: "Football",     icon: "⚽", color: "bg-lime-100 text-lime-800" },
-  { id: "9",  slug: "basketball",   nameRu: "Баскетбол",       name: "Basketball",   icon: "🏀", color: "bg-orange-100 text-orange-800" },
-  { id: "10", slug: "tennis",       nameRu: "Теннис",          name: "Tennis",       icon: "🎾", color: "bg-yellow-100 text-yellow-800" },
-  { id: "11", slug: "swimming",     nameRu: "Плавание",        name: "Swimming",     icon: "🏊", color: "bg-blue-100 text-blue-800" },
-  { id: "12", slug: "bath",         nameRu: "Баня",            name: "Bath",         icon: "🛖", color: "bg-stone-100 text-stone-800" },
-  { id: "13", slug: "boardgames",   nameRu: "Настолки",        name: "Board games",  icon: "🎲", color: "bg-indigo-100 text-indigo-800" },
-  { id: "14", slug: "other",        nameRu: "Другое",          name: "Other",        icon: "🎯", color: "bg-gray-100 text-gray-800" },
+  export const CATEGORIES: Category[] = [
+  { id: "1",  slug: "football",     nameRu: "Футбол",             name: "Football",      icon: "⚽", color: "bg-green-100 text-green-800" },
+  { id: "2",  slug: "basketball",   nameRu: "Баскетбол",          name: "Basketball",    icon: "🏀", color: "bg-orange-100 text-orange-800" },
+  { id: "3",  slug: "volleyball",   nameRu: "Волейбол",           name: "Volleyball",    icon: "🏐", color: "bg-yellow-100 text-yellow-800" },
+  { id: "4",  slug: "padel",        nameRu: "Падл",               name: "Padel",         icon: "🎾", color: "bg-lime-100 text-lime-800" },
+  { id: "5",  slug: "tennis",       nameRu: "Теннис",             name: "Tennis",        icon: "🏸", color: "bg-teal-100 text-teal-800" },
+  { id: "6",  slug: "running",      nameRu: "Бег",                name: "Running",       icon: "🏃", color: "bg-blue-100 text-blue-800" },
+  { id: "7",  slug: "yoga",         nameRu: "Йога",               name: "Yoga",          icon: "🧘", color: "bg-purple-100 text-purple-800" },
+  { id: "8",  slug: "boardgames",   nameRu: "Настольные игры",    name: "Board games",   icon: "🎲", color: "bg-indigo-100 text-indigo-800" },
+  { id: "9",  slug: "workout",      nameRu: "Воркаут",            name: "Workout",       icon: "💪", color: "bg-red-100 text-red-800" },
+  { id: "10", slug: "esports",      nameRu: "Киберспорт-встречи", name: "Esports",       icon: "🎮", color: "bg-violet-100 text-violet-800" },
+  { id: "11", slug: "quests",       nameRu: "Квесты",             name: "Quests",        icon: "🗺️", color: "bg-amber-100 text-amber-800" },
 ];
 
 export const MOCK_ACTIVITIES: Activity[] = [
