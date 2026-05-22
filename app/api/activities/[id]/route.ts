@@ -1,14 +1,14 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
-// GET /api/activities/[id] — получить одно событие
+// GET /api/activities/[id]
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const activity = await prisma.activity.findUnique({
+    const activity = await db.activity.findUnique({
       where: { id: params.id },
       include: {
         creator: {
@@ -54,7 +54,7 @@ export async function GET(
   }
 }
 
-// POST /api/activities/[id] — вступить / покинуть событие
+// POST /api/activities/[id] — вступить / покинуть
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -65,12 +65,12 @@ export async function POST(
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({ where: { clerkId } });
+    const user = await db.user.findUnique({ where: { clerkId } });
     if (!user) {
       return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 });
     }
 
-    const activity = await prisma.activity.findUnique({
+    const activity = await db.activity.findUnique({
       where: { id: params.id },
       include: {
         _count: { select: { participants: { where: { status: "active" } } } },
@@ -85,27 +85,23 @@ export async function POST(
       return NextResponse.json({ error: "Событие недоступно" }, { status: 400 });
     }
 
-    // Проверяем — уже участвует?
-    const existing = await prisma.participation.findUnique({
+    const existing = await db.participation.findUnique({
       where: { userId_activityId: { userId: user.id, activityId: params.id } },
     });
 
     if (existing) {
-      // Если уже участвует — выходим
-      await prisma.participation.update({
+      await db.participation.update({
         where: { userId_activityId: { userId: user.id, activityId: params.id } },
         data: { status: "left" },
       });
       return NextResponse.json({ joined: false, message: "Вы покинули событие" });
     }
 
-    // Проверяем лимит участников
     if (activity._count.participants >= activity.maxParticipants) {
       return NextResponse.json({ error: "Событие заполнено" }, { status: 400 });
     }
 
-    // Вступаем
-    await prisma.participation.upsert({
+    await db.participation.upsert({
       where: { userId_activityId: { userId: user.id, activityId: params.id } },
       update: { status: "active" },
       create: { userId: user.id, activityId: params.id, status: "active" },
@@ -118,7 +114,7 @@ export async function POST(
   }
 }
 
-// DELETE /api/activities/[id] — удалить событие (только создатель)
+// DELETE /api/activities/[id] — удалить (только создатель)
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -129,12 +125,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({ where: { clerkId } });
+    const user = await db.user.findUnique({ where: { clerkId } });
     if (!user) {
       return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 });
     }
 
-    const activity = await prisma.activity.findUnique({
+    const activity = await db.activity.findUnique({
       where: { id: params.id },
     });
 
@@ -146,11 +142,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Нет доступа" }, { status: 403 });
     }
 
-    // Удаляем связанные данные, затем само событие
-    await prisma.$transaction([
-      prisma.participation.deleteMany({ where: { activityId: params.id } }),
-      prisma.message.deleteMany({ where: { activityId: params.id } }),
-      prisma.activity.delete({ where: { id: params.id } }),
+    await db.$transaction([
+      db.participation.deleteMany({ where: { activityId: params.id } }),
+      db.message.deleteMany({ where: { activityId: params.id } }),
+      db.activity.delete({ where: { id: params.id } }),
     ]);
 
     return NextResponse.json({ success: true, message: "Событие удалено" });
