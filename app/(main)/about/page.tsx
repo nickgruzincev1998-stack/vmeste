@@ -183,4 +183,4 @@ export default function AboutPage() {
 
       {/* ЧТО МЫ СТРОИМ */}
       <section className="py-20 bg-cream">
-        <div className="max-w-3xl mx-auto px-4 sm:
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
