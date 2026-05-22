@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { pusherServer } from "@/lib/pusher";
+import { pusherServer } from "@/lib/pusher-server";
 import { currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
