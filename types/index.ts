@@ -34,7 +34,6 @@ export interface User {
   xp: number;
 }
 
-export const CATEGORIES: Category[] = [
   export const CATEGORIES: Category[] = [
   { id: "1",  slug: "football",     nameRu: "Футбол",             name: "Football",      icon: "⚽", color: "bg-green-100 text-green-800" },
   { id: "2",  slug: "basketball",   nameRu: "Баскетбол",          name: "Basketball",    icon: "🏀", color: "bg-orange-100 text-orange-800" },
