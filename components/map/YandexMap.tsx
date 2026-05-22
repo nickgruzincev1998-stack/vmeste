@@ -19,7 +19,7 @@ export interface YandexMapHandle {
 }
 
 declare global {
-  interface Window { ymaps: any; }
+  interface Window { ymaps: any; ymapsReady?: boolean; }
 }
 
 const YandexMap = forwardRef<YandexMapHandle, Props>(({ activities = [], onMapReady }, ref) => {
