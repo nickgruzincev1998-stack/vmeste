@@ -6,9 +6,9 @@ import Navbar from "@/components/layout/Navbar";
 import { db } from "@/lib/db";
 
 const heroCards = [
-  { emoji: "🛖", title: "Баня на Серебрянке",       time: "Сегодня · 19:00", spots: "2 места" },
+  { emoji: "🛖", title: "Баня на Серебрянке",        time: "Сегодня · 19:00", spots: "2 места" },
   { emoji: "🚴", title: "Велопрогулка по набережной", time: "Суббота · 10:00", spots: "6 мест" },
-  { emoji: "⛺", title: "Глэмпинг у Сенежа",         time: "Эти выходные",    spots: "4 места" },
+  { emoji: "⛺", title: "Глэмпинг у Сенежа",          time: "Эти выходные",    spots: "4 места" },
 ];
 
 const steps = [
@@ -18,17 +18,17 @@ const steps = [
 ];
 
 const features = [
-  { icon: MapPin,        title: "События рядом",        desc: "Карта с активностями в твоём городе и точной геолокацией." },
-  { icon: Users,         title: "Проверенные люди",      desc: "Рейтинги, отзывы и уровни участников для безопасного общения." },
-  { icon: Zap,           title: "Любые активности",      desc: "14 категорий: от йоги до глэмпинга. Если нет нужной — создай сам." },
-  { icon: CalendarCheck, title: "Простое планирование",  desc: "Указывай дату, место, уровень сложности и количество участников." },
-  { icon: Star,          title: "Система достижений",    desc: "Зарабатывай XP, повышай уровень и получай бейджи за активность." },
-  { icon: Shield,        title: "Безопасно",             desc: "Модерация контента и возможность пожаловаться на участника." },
+  { icon: MapPin,        title: "События рядом",       desc: "Карта с активностями в твоём городе и точной геолокацией." },
+  { icon: Users,         title: "Проверенные люди",     desc: "Рейтинги, отзывы и уровни участников для безопасного общения." },
+  { icon: Zap,           title: "Любые активности",     desc: "14 категорий: от йоги до глэмпинга. Если нет нужной — создай сам." },
+  { icon: CalendarCheck, title: "Простое планирование", desc: "Указывай дату, место, уровень сложности и количество участников." },
+  { icon: Star,          title: "Система достижений",   desc: "Зарабатывай XP, повышай уровень и получай бейджи за активность." },
+  { icon: Shield,        title: "Безопасно",            desc: "Модерация контента и возможность пожаловаться на участника." },
 ];
 
 async function getRecentActivities() {
   try {
-    const activities = await db.activity.findMany({
+    return await db.activity.findMany({
       where: { status: "active" },
       include: {
         category: true,
@@ -38,7 +38,6 @@ async function getRecentActivities() {
       orderBy: { createdAt: "desc" },
       take: 6,
     });
-    return activities;
   } catch {
     return [];
   }
@@ -56,37 +55,31 @@ export default async function LandingPage() {
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/2 right-1/3 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-sage/20 blur-3xl" />
         </div>
-
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-20">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 bg-mint/15 border border-mint/30 text-mint text-xs font-semibold px-4 py-2 rounded-full mb-8 animate-fade-up">
+              <div className="inline-flex items-center gap-2 bg-mint/15 border border-mint/30 text-mint text-xs font-semibold px-4 py-2 rounded-full mb-8">
                 <span className="w-1.5 h-1.5 rounded-full bg-mint animate-pulse" />
                 Найди свою компанию
               </div>
-
-              <h1 className="font-unbounded font-black text-cream leading-[1.05] tracking-tight mb-6 animate-fade-up animate-delay-100"
+              <h1 className="font-unbounded font-black text-cream leading-[1.05] tracking-tight mb-6"
                   style={{ fontSize: "clamp(2.4rem, 5vw, 3.8rem)" }}>
                 Досуг{" "}
                 <span className="text-mint block">вместе —</span>
                 интереснее
               </h1>
-
-              <p className="text-cream/65 text-lg leading-relaxed max-w-md mb-10 animate-fade-up animate-delay-200">
+              <p className="text-cream/65 text-lg leading-relaxed max-w-md mb-10">
                 Находи людей для совместных вылазок: баня, велопрогулки, глэмпинг, настолки и всё, что лучше с компанией.
               </p>
-
-              <div className="flex flex-wrap gap-3 mb-14 animate-fade-up animate-delay-300">
+              <div className="flex flex-wrap gap-3 mb-14">
                 <Link href="/feed" className="btn-primary text-base px-8 py-4">
-                  Найти активность
-                  <ArrowRight size={18} />
+                  Найти активность <ArrowRight size={18} />
                 </Link>
                 <Link href="/activities/create" className="btn-ghost text-base px-8 py-4">
                   Создать событие
                 </Link>
               </div>
-
-              <div className="flex gap-10 animate-fade-up animate-delay-400">
+              <div className="flex gap-10">
                 {[
                   { num: "2 400+", label: "участников" },
                   { num: "380",    label: "событий в месяц" },
@@ -100,7 +93,6 @@ export default async function LandingPage() {
               </div>
             </div>
 
-            {/* Floating cards */}
             <div className="hidden lg:flex items-center justify-center">
               <div className="relative w-[380px] h-[460px]">
                 {heroCards.map((card, i) => {
@@ -177,38 +169,47 @@ export default async function LandingPage() {
             Свежие вылазки
           </h2>
 
-          {recentActivities.map((a) => (
-  <Link key={a.id} href={`/activities/${a.id}`} className="card block group">
-    <div className="h-36 flex items-center justify-center bg-forest/90 relative overflow-hidden">
-      <span className="text-6xl select-none">{a.category.icon}</span>
-      <div className="absolute top-3 left-3">
-        <span className="text-xs font-golos font-semibold px-2.5 py-1 rounded-full bg-mint/20 text-sage">
-          {a.category.nameRu}
-        </span>
-      </div>
-    </div>
-    <div className="p-4">
-      <h3 className="font-unbounded font-bold text-sm text-forest leading-snug mb-2 group-hover:text-sage transition-colors line-clamp-2">
-        {a.title}
-      </h3>
-      <div className="flex items-center gap-2 text-xs text-bark mb-1">
-        <MapPin size={12} />
-        <span className="truncate">{a.placeName}</span>
-      </div>
-      <div className="flex items-center justify-between mt-3">
-        <div className="flex items-center gap-1.5">
-          <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-cream text-xs font-bold">
-            {a.creator.name[0]}
-          </div>
-          <span className="text-xs text-bark">{a.creator.name}</span>
-        </div>
-        <span className="text-xs font-semibold text-sage">
-          {a.maxParticipants - a._count.participants} мест
-        </span>
-      </div>
-    </div>
-  </Link>
-))}
+          {recentActivities.length > 0 ? (
+            <div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {recentActivities.map((a) => (
+                  <Link key={a.id} href={`/activities/${a.id}`} className="card block group">
+                    <div className="h-36 flex items-center justify-center bg-forest/90 relative overflow-hidden">
+                      <span className="text-6xl select-none">{a.category.icon}</span>
+                      <div className="absolute top-3 left-3">
+                        <span className="text-xs font-golos font-semibold px-2.5 py-1 rounded-full bg-mint/20 text-sage">
+                          {a.category.nameRu}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-unbounded font-bold text-sm text-forest leading-snug mb-2 group-hover:text-sage transition-colors line-clamp-2">
+                        {a.title}
+                      </h3>
+                      <div className="flex items-center gap-2 text-xs text-bark mb-1">
+                        <MapPin size={12} />
+                        <span className="truncate">{a.placeName}</span>
+                      </div>
+                      <div className="flex items-center justify-between mt-3">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-cream text-xs font-bold">
+                            {a.creator.name[0]}
+                          </div>
+                          <span className="text-xs text-bark">{a.creator.name}</span>
+                        </div>
+                        <span className="text-xs font-semibold text-sage">
+                          {a.maxParticipants - a._count.participants} мест
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              <div className="mt-10 text-center">
+                <Link href="/feed" className="btn-dark inline-flex">
+                  Показать все события <ArrowRight size={18} />
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="text-center py-16 bg-cream rounded-3xl">
@@ -217,15 +218,6 @@ export default async function LandingPage() {
               <p className="text-bark text-sm mb-6">Будь первым — создай событие!</p>
               <Link href="/activities/create" className="btn-dark inline-flex">
                 Создать событие <ArrowRight size={16} />
-              </Link>
-            </div>
-          )}
-
-          {recentActivities.length > 0 && (
-            <div className="mt-10 text-center">
-              <Link href="/feed" className="btn-dark inline-flex">
-                Показать все события
-                <ArrowRight size={18} />
               </Link>
             </div>
           )}
@@ -269,8 +261,7 @@ export default async function LandingPage() {
             Зарегистрируйся бесплатно, найди единомышленников и договорись о встрече уже сегодня.
           </p>
           <Link href="/sign-up" className="btn-primary text-lg px-10 py-4 inline-flex">
-            Создать профиль бесплатно
-            <ArrowRight size={20} />
+            Создать профиль бесплатно <ArrowRight size={20} />
           </Link>
         </div>
       </section>
