@@ -4,9 +4,10 @@ import { NextResponse } from "next/server";
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const clerkUser = await currentUser();
     if (!clerkUser) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
@@ -18,7 +19,7 @@ export async function POST(
     }
 
     const activity = await db.activity.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { creator: true, _count: { select: { participants: true } } },
     });
 
@@ -26,26 +27,22 @@ export async function POST(
       return NextResponse.json({ error: "Событие не найдено" }, { status: 404 });
     }
 
-    // Проверяем что не уже записан
     const existing = await db.participation.findUnique({
-      where: { userId_activityId: { userId: user.id, activityId: params.id } },
+      where: { userId_activityId: { userId: user.id, activityId: id } },
     });
 
     if (existing) {
       return NextResponse.json({ error: "Уже записан" }, { status: 400 });
     }
 
-    // Проверяем места
     if (activity._count.participants >= activity.maxParticipants) {
       return NextResponse.json({ error: "Мест нет" }, { status: 400 });
     }
 
-    // Записываем участника
     await db.participation.create({
-      data: { userId: user.id, activityId: params.id },
+      data: { userId: user.id, activityId: id },
     });
 
-    // Создаём уведомление для организатора
     if (activity.creatorId !== user.id) {
       await db.notification.create({
         data: {
@@ -66,9 +63,10 @@ export async function POST(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const clerkUser = await currentUser();
     if (!clerkUser) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
@@ -80,7 +78,7 @@ export async function DELETE(
     }
 
     await db.participation.delete({
-      where: { userId_activityId: { userId: user.id, activityId: params.id } },
+      where: { userId_activityId: { userId: user.id, activityId: id } },
     });
 
     return NextResponse.json({ success: true });
