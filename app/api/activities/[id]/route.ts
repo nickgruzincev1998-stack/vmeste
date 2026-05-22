@@ -5,11 +5,12 @@ import { db } from "@/lib/db";
 // GET /api/activities/[id]
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const activity = await db.activity.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         creator: {
           select: {
@@ -57,9 +58,10 @@ export async function GET(
 // POST /api/activities/[id] — вступить / покинуть
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { userId: clerkId } = await auth();
     if (!clerkId) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
@@ -71,7 +73,7 @@ export async function POST(
     }
 
     const activity = await db.activity.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: { select: { participants: { where: { status: "active" } } } },
       },
@@ -86,12 +88,12 @@ export async function POST(
     }
 
     const existing = await db.participation.findUnique({
-      where: { userId_activityId: { userId: user.id, activityId: params.id } },
+      where: { userId_activityId: { userId: user.id, activityId: id } },
     });
 
     if (existing) {
       await db.participation.update({
-        where: { userId_activityId: { userId: user.id, activityId: params.id } },
+        where: { userId_activityId: { userId: user.id, activityId: id } },
         data: { status: "left" },
       });
       return NextResponse.json({ joined: false, message: "Вы покинули событие" });
@@ -102,9 +104,9 @@ export async function POST(
     }
 
     await db.participation.upsert({
-      where: { userId_activityId: { userId: user.id, activityId: params.id } },
+      where: { userId_activityId: { userId: user.id, activityId: id } },
       update: { status: "active" },
-      create: { userId: user.id, activityId: params.id, status: "active" },
+      create: { userId: user.id, activityId: id, status: "active" },
     });
 
     return NextResponse.json({ joined: true, message: "Вы вступили в событие" });
@@ -117,9 +119,10 @@ export async function POST(
 // DELETE /api/activities/[id] — удалить (только создатель)
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { userId: clerkId } = await auth();
     if (!clerkId) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
@@ -131,7 +134,7 @@ export async function DELETE(
     }
 
     const activity = await db.activity.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!activity) {
@@ -143,9 +146,9 @@ export async function DELETE(
     }
 
     await db.$transaction([
-      db.participation.deleteMany({ where: { activityId: params.id } }),
-      db.message.deleteMany({ where: { activityId: params.id } }),
-      db.activity.delete({ where: { id: params.id } }),
+      db.participation.deleteMany({ where: { activityId: id } }),
+      db.message.deleteMany({ where: { activityId: id } }),
+      db.activity.delete({ where: { id } }),
     ]);
 
     return NextResponse.json({ success: true, message: "Событие удалено" });
