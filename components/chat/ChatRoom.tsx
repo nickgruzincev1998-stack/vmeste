@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { Send, Lock } from "lucide-react";
-import { pusherClient } from "@/lib/pusher";
+import { pusherClient } from "@/lib/pusher-client";
 import { cn } from "@/lib/utils";
 
 interface Message {
