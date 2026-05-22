@@ -177,40 +177,38 @@ export default async function LandingPage() {
             Свежие вылазки
           </h2>
 
-          {recentActivities.length > 0 ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {recentActivities.map((a) => (
-                <Link key={a.id} href={`/activities/${a.id}`} className="card block group">
-                  <div className="h-36 flex items-center justify-center bg-forest/90 relative overflow-hidden">
-                    <span className="text-6xl select-none">{a.category.icon}</span>
-                    <div className="absolute top-3 left-3">
-                      <span className={`text-xs font-golos font-semibold px-2.5 py-1 rounded-full ${a.category.color}`}>
-                        {a.category.nameRu}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-unbounded font-bold text-sm text-forest leading-snug mb-2 group-hover:text-sage transition-colors line-clamp-2">
-                      {a.title}
-                    </h3>
-                    <div className="flex items-center gap-2 text-xs text-bark mb-1">
-                      <MapPin size={12} />
-                      <span className="truncate">{a.placeName}</span>
-                    </div>
-                    <div className="flex items-center justify-between mt-3">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-cream text-xs font-bold">
-                          {a.creator.name[0]}
-                        </div>
-                        <span className="text-xs text-bark">{a.creator.name}</span>
-                      </div>
-                      <span className="text-xs font-semibold text-sage">
-                        {a.maxParticipants - a._count.participants} мест
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
+          {recentActivities.map((a) => (
+  <Link key={a.id} href={`/activities/${a.id}`} className="card block group">
+    <div className="h-36 flex items-center justify-center bg-forest/90 relative overflow-hidden">
+      <span className="text-6xl select-none">{a.category.icon}</span>
+      <div className="absolute top-3 left-3">
+        <span className="text-xs font-golos font-semibold px-2.5 py-1 rounded-full bg-mint/20 text-sage">
+          {a.category.nameRu}
+        </span>
+      </div>
+    </div>
+    <div className="p-4">
+      <h3 className="font-unbounded font-bold text-sm text-forest leading-snug mb-2 group-hover:text-sage transition-colors line-clamp-2">
+        {a.title}
+      </h3>
+      <div className="flex items-center gap-2 text-xs text-bark mb-1">
+        <MapPin size={12} />
+        <span className="truncate">{a.placeName}</span>
+      </div>
+      <div className="flex items-center justify-between mt-3">
+        <div className="flex items-center gap-1.5">
+          <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-cream text-xs font-bold">
+            {a.creator.name[0]}
+          </div>
+          <span className="text-xs text-bark">{a.creator.name}</span>
+        </div>
+        <span className="text-xs font-semibold text-sage">
+          {a.maxParticipants - a._count.participants} мест
+        </span>
+      </div>
+    </div>
+  </Link>
+))}
             </div>
           ) : (
             <div className="text-center py-16 bg-cream rounded-3xl">
