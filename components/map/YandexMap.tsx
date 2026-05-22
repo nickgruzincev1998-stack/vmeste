@@ -28,17 +28,23 @@ const YandexMap = forwardRef<YandexMapHandle, Props>(({ activities = [], onMapRe
 
   useImperativeHandle(ref, () => ({
     async searchAddress(address: string) {
-      if (!window.ymaps || !mapInstance.current) return null;
-      try {
-        const res = await window.ymaps.geocode(address, { results: 1 });
-        const obj = res.geoObjects.get(0);
-        if (!obj) return null;
-        const coords = obj.geometry.getCoordinates();
-        return { lat: coords[0], lng: coords[1] };
-      } catch {
-        return null;
-      }
-    },
+  console.log("searchAddress called", address, !!window.ymaps, !!mapInstance.current);
+  if (!window.ymaps || !mapInstance.current) return null;
+  try {
+    console.log("calling geocode...");
+    const res = await window.ymaps.geocode(address, { results: 1 });
+    console.log("geocode result:", res);
+    const obj = res.geoObjects.get(0);
+    console.log("first object:", obj);
+    if (!obj) return null;
+    const coords = obj.geometry.getCoordinates();
+    console.log("coords:", coords);
+    return { lat: coords[0], lng: coords[1] };
+  } catch (e) {
+    console.error("geocode error:", e);
+    return null;
+  }
+},
     setCenter(lat: number, lng: number, zoom = 13) {
       mapInstance.current?.setCenter([lat, lng], zoom, { duration: 500 });
     },
