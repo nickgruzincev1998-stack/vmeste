@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Menu, X, MapPin, Compass, Home, Plus } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Menu, X, MapPin, Compass, Home, Plus, User } from "lucide-react";
 import { UserButton, useAuth } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +17,18 @@ export default function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const { isSignedIn } = useAuth();
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isSignedIn) {
+      fetch("/api/users/me")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.username) setUsername(data.username);
+        })
+        .catch(() => {});
+    }
+  }, [isSignedIn]);
 
   return (
     <nav className="sticky top-0 z-50 bg-forest/95 backdrop-blur-md border-b border-white/10">
@@ -53,7 +65,23 @@ export default function Navbar() {
               Создать событие
             </Link>
             {isSignedIn ? (
-              <UserButton />
+              <div className="flex items-center gap-2">
+                {username && (
+                  <Link
+                    href={`/profile/${username}`}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-golos font-medium transition-all",
+                      pathname.startsWith("/profile")
+                        ? "bg-mint/20 text-mint"
+                        : "text-cream/70 hover:text-cream hover:bg-white/10"
+                    )}
+                  >
+                    <User size={15} />
+                    Профиль
+                  </Link>
+                )}
+                <UserButton />
+              </div>
             ) : (
               <Link
                 href="/sign-in"
@@ -102,7 +130,17 @@ export default function Navbar() {
                 Создать событие
               </Link>
               {isSignedIn ? (
-                <div className="flex justify-center">
+                <div className="flex items-center justify-between px-2">
+                  {username && (
+                    <Link
+                      href={`/profile/${username}`}
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2 text-cream/70 hover:text-cream text-sm font-golos transition-colors"
+                    >
+                      <User size={16} />
+                      Мой профиль
+                    </Link>
+                  )}
                   <UserButton />
                 </div>
               ) : (
