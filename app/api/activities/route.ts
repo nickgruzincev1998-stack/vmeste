@@ -8,12 +8,16 @@ export async function GET(req: Request) {
     const category = searchParams.get("cat");
     const difficulty = searchParams.get("diff");
     const search = searchParams.get("q");
+    const city = searchParams.get("city");
 
     const activities = await db.activity.findMany({
       where: {
         status: "active",
         ...(category && { category: { slug: category } }),
         ...(difficulty && { difficulty }),
+        ...(city && {
+          placeName: { contains: city, mode: "insensitive" },
+        }),
         ...(search && {
           OR: [
             { title: { contains: search, mode: "insensitive" } },
@@ -43,7 +47,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { title, description, categoryId, date, time, placeName, maxParticipants, difficulty } = body;
+    const { title, description, categoryId, date, time, placeName, maxParticipants, difficulty, lat, lng } = body;
 
     const user = await db.user.findUnique({ where: { clerkId: clerkUser.id } });
     if (!user) {
@@ -60,6 +64,8 @@ export async function POST(req: Request) {
         placeName,
         maxParticipants: Number(maxParticipants),
         difficulty,
+        lat: lat ? Number(lat) : null,
+        lng: lng ? Number(lng) : null,
       },
       include: {
         category: true,

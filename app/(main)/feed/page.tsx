@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import ActivityCard from "@/components/activity/ActivityCard";
+import CitySelector from "@/components/shared/CitySelector";
 import { CATEGORIES } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -19,24 +20,37 @@ export default function FeedPage() {
   const [search, setSearch]         = useState("");
   const [cat, setCat]               = useState("all");
   const [diff, setDiff]             = useState("all");
+  const [city, setCity]             = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("selectedCity") || "";
+    }
+    return "";
+  });
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     fetchActivities();
-  }, [cat, diff, search]);
+  }, [cat, diff, search, city]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("selectedCity", city);
+    }
+  }, [city]);
 
   async function fetchActivities() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (cat !== "all")  params.set("cat", cat);
+      if (cat !== "all") params.set("cat", cat);
       if (diff !== "all") params.set("diff", diff);
-      if (search)         params.set("q", search);
+      if (search) params.set("q", search);
+      if (city) params.set("city", city);
 
       const res = await fetch(`/api/activities?${params}`);
       const data = await res.json();
       setActivities(Array.isArray(data) ? data : []);
-    } catch (e) {
+    } catch {
       setActivities([]);
     } finally {
       setLoading(false);
@@ -49,7 +63,6 @@ export default function FeedPage() {
 
   const hasFilters = cat !== "all" || diff !== "all" || search !== "";
 
-  // Преобразуем данные из БД в формат ActivityCard
   function mapActivity(a: any) {
     return {
       id: a.id,
@@ -67,15 +80,35 @@ export default function FeedPage() {
 
   return (
     <div className="min-h-screen bg-cream">
-      <div className="bg-forest text-cream py-14 px-4">
+      <div className="bg-forest text-cream py-10 px-4">
         <div className="max-w-7xl mx-auto">
           <span className="text-mint text-xs font-semibold uppercase tracking-widest">Лента событий</span>
-          <h1 className="font-unbounded font-black text-3xl md:text-4xl mt-2 mb-2">Найди активность</h1>
-          <p className="text-cream/60 text-base">Свежие события рядом с тобой</p>
+          <h1 className="font-unbounded font-black text-3xl md:text-4xl mt-2 mb-6">Найди игру</h1>
+
+          {/* City selector */}
+          <div className="max-w-xs">
+            <div className="text-cream/60 text-xs font-golos mb-2">Твой город</div>
+            <CitySelector value={city} onChange={setCity} />
+          </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* City notice */}
+        {city && (
+          <div className="flex items-center gap-2 bg-mint/10 border border-mint/20 rounded-2xl px-4 py-3 mb-6">
+            <span className="text-sage text-sm font-golos">
+              🗺️ Показываем игры в городе <strong>{city}</strong>
+            </span>
+            <button
+              onClick={() => setCity("")}
+              className="ml-auto text-bark hover:text-forest text-xs font-golos underline transition-colors"
+            >
+              Показать все
+            </button>
+          </div>
+        )}
+
         {/* Search */}
         <div className="flex gap-3 mb-6">
           <div className="flex-1 relative">
@@ -156,13 +189,14 @@ export default function FeedPage() {
           </div>
         )}
 
-        {/* Results */}
+        {/* Results count */}
         <div className="flex items-center justify-between mb-5">
           <span className="text-sm text-bark">
-            {loading ? "Загрузка..." : `${activities.length} событий`}
+            {loading ? "Загрузка..." : activities.length === 0 ? "Игр не найдено" : `${activities.length} игр`}
           </span>
         </div>
 
+        {/* Grid */}
         {loading ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -177,17 +211,21 @@ export default function FeedPage() {
           </div>
         ) : (
           <div className="text-center py-24">
-            <div className="text-6xl mb-4">🔍</div>
+            <div className="text-6xl mb-4">{city ? "🗺️" : "🔍"}</div>
             <h3 className="font-unbounded font-bold text-forest text-xl mb-2">
-              {hasFilters ? "Ничего не нашлось" : "Событий пока нет"}
+              {city ? `В городе ${city} пока нет игр` : "Ничего не найдено"}
             </h3>
             <p className="text-bark text-sm mb-6">
-              {hasFilters ? "Попробуй сбросить фильтры" : "Будь первым — создай событие!"}
+              {city ? "Создай первую игру в своём городе!" : "Попробуй сбросить фильтры"}
             </p>
-            {hasFilters
-              ? <button onClick={reset} className="btn-dark inline-flex">Сбросить фильтры</button>
-              : <a href="/activities/create" className="btn-dark inline-flex">Создать событие</a>
-            }
+            <div className="flex gap-3 justify-center flex-wrap">
+              {city && (
+                <button onClick={() => setCity("")} className="btn-ghost-dark inline-flex text-sm px-5 py-2.5 border border-forest/20 rounded-full text-bark hover:text-forest transition-colors">
+                  Показать все города
+                </button>
+              )}
+              <a href="/activities/create" className="btn-dark inline-flex">Создать игру</a>
+            </div>
           </div>
         )}
       </div>
