@@ -40,6 +40,8 @@ model Activity {
   creatorId       String
   date            DateTime
   placeName       String
+  lat             Float?   // ← добавь
+  lng             Float?   // ← добавь
   difficulty      String   @default("beginner")
   maxParticipants Int      @default(10)
   status          String   @default("active")
