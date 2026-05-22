@@ -82,7 +82,7 @@ const YandexMap = forwardRef<YandexMapHandle, Props>(({ activities = [], onMapRe
     if (window.ymaps) { initMap(); return; }
 
     const script = document.createElement("script");
-    script.src = `https://api-maps.yandex.ru/2.1/?apikey=${apiKey}&lang=ru_RU`;
+    script.src = `https://api-maps.yandex.ru/2.1/?apikey=${apiKey}&lang=ru_RU&load=package.full`;
     script.async = true;
     script.onload = initMap;
     document.head.appendChild(script);
