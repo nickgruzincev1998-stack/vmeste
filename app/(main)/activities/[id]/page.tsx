@@ -29,13 +29,6 @@ const mockParticipants = [
   { name: "Юля Н.",     initial: "Ю", color: "bg-mint text-forest" },
 ];
 
-{/* Chat */}
-<ChatRoom
-  activityId={activity.id}
-  currentUserId={undefined}
-  isParticipant={joined}
-/>
-
 export default function ActivityDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { isSignedIn } = useAuth();
@@ -75,7 +68,7 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
             <div className="h-64 rounded-3xl bg-forest flex items-center justify-center relative overflow-hidden">
               <span className="text-8xl">{activity.category.icon}</span>
               <div className="absolute top-4 left-4 flex gap-2">
-                <span className={cn("text-xs font-golos font-semibold px-3 py-1.5 rounded-full", activity.category.color)}>
+                <span className="text-xs font-golos font-semibold px-3 py-1.5 rounded-full bg-mint/20 text-sage">
                   {activity.category.nameRu}
                 </span>
                 <span className={cn("text-xs font-golos font-semibold px-3 py-1.5 rounded-full", diff.cls)}>
@@ -132,6 +125,13 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
                 ))}
               </div>
             </div>
+
+            {/* Chat */}
+            <ChatRoom
+              activityId={activity.id}
+              currentUserId={undefined}
+              isParticipant={joined}
+            />
           </div>
 
           {/* Sidebar */}
