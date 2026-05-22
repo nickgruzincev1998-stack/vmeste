@@ -7,6 +7,7 @@ import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { ArrowLeft, Calendar, MapPin, Users, Star, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { use } from "react";
 
 const diffLabel: Record<string, { label: string; cls: string }> = {
   beginner:     { label: "Новичок",     cls: "bg-green-100 text-green-800" },
@@ -20,7 +21,8 @@ function formatDate(iso: string) {
   });
 }
 
-export default function ActivityDetailPage({ params }: { params: { id: string } }) {
+export default function ActivityDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const { isSignedIn } = useAuth();
   const [activity, setActivity] = useState<any>(null);
@@ -30,8 +32,7 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
   const [dbUserId, setDbUserId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    // Загружаем событие
-    fetch(`/api/activities/${params.id}`)
+    fetch(`/api/activities/${id}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.error) router.push("/feed");
@@ -40,7 +41,6 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
       .catch(() => router.push("/feed"))
       .finally(() => setLoading(false));
 
-    // Загружаем текущего пользователя
     if (isSignedIn) {
       fetch("/api/users/me")
         .then((r) => r.json())
@@ -48,7 +48,7 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
           if (data.id) setDbUserId(data.id);
         });
     }
-  }, [params.id, isSignedIn]);
+  }, [id, isSignedIn]);
 
   async function handleJoin() {
     if (!isSignedIn) { router.push("/sign-in"); return; }
@@ -57,20 +57,20 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
     setJoining(true);
     try {
       if (joined) {
-        await fetch(`/api/activities/${params.id}/join`, { method: "DELETE" });
+        await fetch(`/api/activities/${id}`, { method: "POST" });
         setJoined(false);
         setActivity((prev: any) => ({
           ...prev,
           _count: { ...prev._count, participants: prev._count.participants - 1 },
         }));
       } else {
-        const res = await fetch(`/api/activities/${params.id}/join`, { method: "POST" });
+        const res = await fetch(`/api/activities/${id}`, { method: "POST" });
         const data = await res.json();
-        if (data.success) {
-          setJoined(true);
+        if (data.joined !== undefined) {
+          setJoined(data.joined);
           setActivity((prev: any) => ({
             ...prev,
-            _count: { ...prev._count, participants: prev._count.participants + 1 },
+            _count: { ...prev._count, participants: prev._count.participants + (data.joined ? 1 : -1) },
           }));
         } else {
           alert(data.error || "Ошибка");
@@ -111,10 +111,7 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         <div className="grid lg:grid-cols-3 gap-8">
-
-          {/* Main */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Cover */}
             <div className="h-64 rounded-3xl bg-forest flex items-center justify-center relative overflow-hidden">
               <span className="text-8xl">{activity.category?.icon ?? "🎯"}</span>
               <div className="absolute top-4 left-4 flex gap-2">
@@ -127,7 +124,6 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
               </div>
             </div>
 
-            {/* Title */}
             <div>
               <h1 className="font-unbounded font-black text-forest text-2xl md:text-3xl leading-tight mb-4">
                 {activity.title}
@@ -148,13 +144,11 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
               </div>
             </div>
 
-            {/* Description */}
             <div className="bg-white rounded-2xl p-6 border border-forest/8">
               <h2 className="font-unbounded font-bold text-forest text-base mb-3">Описание</h2>
               <p className="text-bark leading-relaxed text-sm">{activity.description || "Описание не указано"}</p>
             </div>
 
-            {/* Chat */}
             <ChatRoom
               activityId={activity.id}
               currentUserId={dbUserId}
@@ -162,7 +156,6 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
             />
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-4">
             <div className="bg-white rounded-3xl border border-forest/10 p-6 sticky top-24">
               <div className="mb-5">
@@ -204,7 +197,6 @@ export default function ActivityDetailPage({ params }: { params: { id: string } 
               )}
             </div>
 
-            {/* Organizer */}
             {activity.creator && (
               <div className="bg-white rounded-3xl border border-forest/10 p-5">
                 <div className="text-xs font-semibold text-bark uppercase tracking-wide mb-4">Организатор</div>
