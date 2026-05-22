@@ -184,3 +184,21 @@ export default function AboutPage() {
       {/* ЧТО МЫ СТРОИМ */}
       <section className="py-20 bg-cream">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
+          <h2 className="font-unbounded font-black text-forest text-3xl mb-6">
+            Что мы строим
+          </h2>
+          <p className="text-bark text-xl leading-relaxed mb-12 font-golos">
+            Не просто приложение.<br />
+            <span className="font-semibold text-forest">А способ сделать реальную жизнь доступнее, проще и живее.</span>
+          </p>
+          <Link href="/sign-up" className="inline-flex items-center gap-3 bg-forest text-cream font-unbounded font-bold text-lg px-12 py-5 rounded-full hover:bg-moss transition-colors">
+            Присоединиться
+            <ArrowRight size={22} />
+          </Link>
+        </div>
+      </section>
+
+      <Footer />
+    </div>
+  );
+}
