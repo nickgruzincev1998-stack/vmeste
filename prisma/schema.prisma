@@ -30,6 +30,7 @@ model User {
   reviewsGiven   Review[]        @relation("Reviewer")
   reviewsReceived Review[]       @relation("Reviewee")
   notifications  Notification[]
+  messages        Message[]
 }
 
 model Activity {
@@ -51,6 +52,7 @@ model Activity {
   creator        User            @relation(fields: [creatorId], references: [id])
   category       Category        @relation(fields: [categoryId], references: [id])
   participants   Participation[]
+  messages        Message[]
 }
 
 model Category {
@@ -97,4 +99,15 @@ model Notification {
   createdAt DateTime @default(now())
 
   user      User @relation(fields: [userId], references: [id])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  activityId String
+  content    String
+  sentAt     DateTime @default(now())
+
+  sender     User     @relation(fields: [senderId], references: [id])
+  activity   Activity @relation(fields: [activityId], references: [id])
 }
