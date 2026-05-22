@@ -1,12 +1,12 @@
 "use client";
 
-import AddressInput from "@/components/shared/AddressInput";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { ArrowLeft, ArrowRight, Check, Calendar, MapPin } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Calendar } from "lucide-react";
 import { CATEGORIES } from "@/types";
 import { cn } from "@/lib/utils";
+import AddressInput from "@/components/shared/AddressInput";
 
 const difficulties = [
   { value: "beginner",     label: "Новичок",     desc: "Подходит всем" },
@@ -51,33 +51,21 @@ export default function CreateActivityPage() {
   }
 
   async function handleSubmit() {
-    if (!user) {
-      router.push("/sign-in");
-      return;
-    }
-
+    if (!user) { router.push("/sign-in"); return; }
     setLoading(true);
     setError("");
-
     try {
       const res = await fetch("/api/activities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Ошибка при создании события");
-        setLoading(false);
-        return;
-      }
-
+      if (!res.ok) { setError(data.error || "Ошибка"); setLoading(false); return; }
       setSubmitted(true);
       setTimeout(() => router.push("/feed"), 2000);
-    } catch (e) {
-      setError("Ошибка сети. Попробуй ещё раз.");
+    } catch {
+      setError("Ошибка сети.");
       setLoading(false);
     }
   }
@@ -198,15 +186,11 @@ export default function CreateActivityPage() {
           <div className="space-y-6">
             <div>
               <label className="block text-xs font-semibold text-bark uppercase tracking-wide mb-2">Место</label>
-              <div className="relative">
-                <MapPin size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-sage" />
-                <input
-                  value={form.placeName}
-                  onChange={(e) => set("placeName", e.target.value)}
-                  placeholder="Парк Горького, центральный вход"
-                  className="w-full bg-white border-2 border-forest/10 rounded-2xl pl-11 pr-5 py-4 text-sm font-golos outline-none focus:border-sage transition-colors"
-                />
-              </div>
+              <AddressInput
+                value={form.placeName}
+                onChange={(val) => set("placeName", val)}
+                placeholder="Парк Горького, центральный вход"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

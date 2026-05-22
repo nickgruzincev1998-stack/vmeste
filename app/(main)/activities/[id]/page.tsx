@@ -1,5 +1,6 @@
 "use client";
 
+import ChatRoom from "@/components/chat/ChatRoom";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
@@ -27,6 +28,13 @@ const mockParticipants = [
   { name: "Петр С.",    initial: "П", color: "bg-bark" },
   { name: "Юля Н.",     initial: "Ю", color: "bg-mint text-forest" },
 ];
+
+{/* Chat */}
+<ChatRoom
+  activityId={activity.id}
+  currentUserId={undefined}
+  isParticipant={joined}
+/>
 
 export default function ActivityDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
