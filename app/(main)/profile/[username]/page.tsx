@@ -1,26 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
-import { Star, Users, Calendar, Trophy, MapPin, ArrowLeft, Edit2, Check, X } from "lucide-react";
+import { Star, Users, Calendar, Trophy, MapPin, ArrowLeft, Edit2, Check, X, Camera } from "lucide-react";
 import Link from "next/link";
 import ActivityCard from "@/components/activity/ActivityCard";
 import { cn } from "@/lib/utils";
 
 const badges = [
-  { icon: "🚴", label: "Cyclist",    desc: "5 велопрогулок" },
-  { icon: "🔥", label: "On Fire",    desc: "Streak 7 дней" },
+  { icon: "🚴", label: "Cyclist",     desc: "5 велопрогулок" },
+  { icon: "🔥", label: "On Fire",     desc: "Streak 7 дней" },
   { icon: "⭐", label: "5-Star Host", desc: "10 отзывов 5★" },
   { icon: "🤝", label: "Connector",  desc: "5 приглашений" },
 ];
 
 export default function ProfilePage({ params }: { params: { username: string } }) {
   const { user: clerkUser } = useUser();
-  const [dbUser, setDbUser] = useState<any>(null);
+  const [dbUser, setDbUser]     = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
-  const [editing, setEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ name: "", city: "", bio: "", age: "" });
+  const [editing, setEditing]   = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [avatar, setAvatar]     = useState<string | null>(null);
+  const [form, setForm]         = useState({ name: "", city: "", bio: "", age: "" });
+  const fileInputRef            = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/users/me")
@@ -28,11 +31,12 @@ export default function ProfilePage({ params }: { params: { username: string } }
       .then((data) => {
         if (!data.error) {
           setDbUser(data);
+          setAvatar(data.avatar || null);
           setForm({
             name: data.name || "",
             city: data.city || "",
-            bio: data.bio || "",
-            age: data.age?.toString() || "",
+            bio:  data.bio  || "",
+            age:  data.age?.toString() || "",
           });
         }
       });
@@ -50,20 +54,43 @@ export default function ProfilePage({ params }: { params: { username: string } }
       body: JSON.stringify(form),
     });
     const data = await res.json();
-    if (!data.error) {
-      setDbUser(data);
-      setEditing(false);
-    }
+    if (!data.error) { setDbUser(data); setEditing(false); }
     setLoading(false);
+  }
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/users/avatar", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.avatarUrl) {
+        setAvatar(data.avatarUrl);
+      } else {
+        alert("Ошибка загрузки: " + (data.error || "Неизвестная ошибка"));
+      }
+    } catch {
+      alert("Ошибка загрузки фото");
+    } finally {
+      setUploading(false);
+    }
   }
 
   const displayName = dbUser?.name || clerkUser?.fullName || "Пользователь";
   const displayCity = dbUser?.city || "Город не указан";
   const displayBio  = dbUser?.bio  || "Расскажи о себе…";
+  const displayAvatar = avatar || clerkUser?.imageUrl;
 
   return (
     <div className="min-h-screen bg-cream">
-      {/* Header */}
       <div className="bg-forest text-cream pb-20 pt-8 px-4 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-sage/10 blur-3xl" />
@@ -74,13 +101,34 @@ export default function ProfilePage({ params }: { params: { username: string } }
           </Link>
 
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6">
-            {/* Avatar */}
-            <div className="w-24 h-24 rounded-3xl bg-mint flex items-center justify-center text-forest font-unbounded font-black text-4xl shadow-xl overflow-hidden">
-              {clerkUser?.imageUrl ? (
-                <img src={clerkUser.imageUrl} alt="avatar" className="w-full h-full object-cover" />
-              ) : (
-                displayName[0]?.toUpperCase()
-              )}
+            {/* Avatar с кнопкой загрузки */}
+            <div className="relative">
+              <div className="w-24 h-24 rounded-3xl bg-mint flex items-center justify-center text-forest font-unbounded font-black text-4xl shadow-xl overflow-hidden">
+                {displayAvatar ? (
+                  <img src={displayAvatar} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  displayName[0]?.toUpperCase()
+                )}
+              </div>
+              {/* Кнопка смены аватара */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="absolute -bottom-2 -right-2 w-8 h-8 bg-mint rounded-full flex items-center justify-center shadow-lg hover:bg-cream transition-colors"
+              >
+                {uploading ? (
+                  <div className="w-3 h-3 border-2 border-forest border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Camera size={14} className="text-forest" />
+                )}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
             </div>
 
             <div className="flex-1">
@@ -120,7 +168,6 @@ export default function ProfilePage({ params }: { params: { username: string } }
               </div>
             </div>
 
-            {/* Edit buttons */}
             {editing ? (
               <div className="flex gap-2">
                 <button
@@ -147,7 +194,6 @@ export default function ProfilePage({ params }: { params: { username: string } }
             )}
           </div>
 
-          {/* Bio */}
           {editing ? (
             <textarea
               value={form.bio}
@@ -163,7 +209,6 @@ export default function ProfilePage({ params }: { params: { username: string } }
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-10 pb-12">
-        {/* Stats */}
         <div className="grid grid-cols-4 gap-3 mb-8">
           {[
             { icon: Calendar, num: activities.length.toString(), label: "событий" },
@@ -179,12 +224,9 @@ export default function ProfilePage({ params }: { params: { username: string } }
           ))}
         </div>
 
-        {/* XP Bar */}
         <div className="bg-white rounded-2xl p-5 mb-6 border border-forest/8">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-golos font-semibold text-forest">
-              Уровень {dbUser?.level || 1}
-            </span>
+            <span className="text-sm font-golos font-semibold text-forest">Уровень {dbUser?.level || 1}</span>
             <span className="text-xs text-bark">{dbUser?.xp || 0} XP</span>
           </div>
           <div className="h-2.5 bg-sand rounded-full overflow-hidden">
@@ -192,7 +234,6 @@ export default function ProfilePage({ params }: { params: { username: string } }
           </div>
         </div>
 
-        {/* Badges */}
         <div className="bg-white rounded-2xl p-5 mb-6 border border-forest/8">
           <h2 className="font-unbounded font-bold text-forest text-base mb-4">Достижения</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -209,7 +250,6 @@ export default function ProfilePage({ params }: { params: { username: string } }
           <p className="text-xs text-bark mt-3">Создавай события чтобы разблокировать достижения</p>
         </div>
 
-        {/* Activities */}
         <div>
           <h2 className="font-unbounded font-bold text-forest text-xl mb-5">Мои события</h2>
           {activities.length > 0 ? (
