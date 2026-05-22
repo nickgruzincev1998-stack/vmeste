@@ -98,6 +98,8 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const spotsLeft = activity.maxParticipants - currentParticipants;
   const isFull = spotsLeft <= 0;
   const diff = diffLabel[activity.difficulty] ?? { label: activity.difficulty, cls: "bg-gray-100 text-gray-800" };
+  const isCreator = activity.creatorId === dbUserId;
+const isParticipant = joined || isCreator;
 
   return (
     <div className="min-h-screen bg-cream">
