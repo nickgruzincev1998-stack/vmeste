@@ -31,6 +31,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const [joining, setJoining]   = useState(false);
   const [dbUserId, setDbUserId] = useState<string | undefined>(undefined);
 
+  // Загружаем событие
   useEffect(() => {
     fetch(`/api/activities/${id}`)
       .then((r) => r.json())
@@ -40,15 +41,24 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       })
       .catch(() => router.push("/feed"))
       .finally(() => setLoading(false));
+  }, [id]);
 
-    if (isSignedIn) {
-      fetch("/api/users/me")
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.id) setDbUserId(data.id);
-        });
+  // Загружаем текущего пользователя
+  useEffect(() => {
+    if (!isSignedIn) return;
+    fetch("/api/users/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.id) setDbUserId(data.id);
+      });
+  }, [isSignedIn]);
+
+  // Когда оба загружены — проверяем является ли создателем
+  useEffect(() => {
+    if (activity && dbUserId && activity.creatorId === dbUserId) {
+      setJoined(true);
     }
-  }, [id, isSignedIn]);
+  }, [activity, dbUserId]);
 
   async function handleJoin() {
     if (!isSignedIn) { router.push("/sign-in"); return; }
@@ -56,25 +66,16 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
 
     setJoining(true);
     try {
-      if (joined) {
-        await fetch(`/api/activities/${id}`, { method: "POST" });
-        setJoined(false);
+      const res = await fetch(`/api/activities/${id}`, { method: "POST" });
+      const data = await res.json();
+      if (data.joined !== undefined) {
+        setJoined(data.joined);
         setActivity((prev: any) => ({
           ...prev,
-          _count: { ...prev._count, participants: prev._count.participants - 1 },
+          _count: { ...prev._count, participants: prev._count.participants + (data.joined ? 1 : -1) },
         }));
       } else {
-        const res = await fetch(`/api/activities/${id}`, { method: "POST" });
-        const data = await res.json();
-        if (data.joined !== undefined) {
-          setJoined(data.joined);
-          setActivity((prev: any) => ({
-            ...prev,
-            _count: { ...prev._count, participants: prev._count.participants + (data.joined ? 1 : -1) },
-          }));
-        } else {
-          alert(data.error || "Ошибка");
-        }
+        alert(data.error || "Ошибка");
       }
     } finally {
       setJoining(false);
@@ -98,8 +99,8 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const spotsLeft = activity.maxParticipants - currentParticipants;
   const isFull = spotsLeft <= 0;
   const diff = diffLabel[activity.difficulty] ?? { label: activity.difficulty, cls: "bg-gray-100 text-gray-800" };
-  const isCreator = activity.creatorId === dbUserId;
-const isParticipant = joined || isCreator;
+  const isCreator = !!(dbUserId && activity.creatorId === dbUserId);
+  const isParticipant = joined || isCreator;
 
   return (
     <div className="min-h-screen bg-cream">
@@ -154,7 +155,7 @@ const isParticipant = joined || isCreator;
             <ChatRoom
               activityId={activity.id}
               currentUserId={dbUserId}
-              isParticipant={joined}
+              isParticipant={isParticipant}
             />
           </div>
 
@@ -177,22 +178,30 @@ const isParticipant = joined || isCreator;
                 </div>
               </div>
 
-              <button
-                onClick={handleJoin}
-                disabled={joining || (isFull && !joined)}
-                className={cn(
-                  "w-full py-4 rounded-2xl font-unbounded font-bold text-sm transition-all duration-200 active:scale-95 disabled:opacity-50",
-                  joined
-                    ? "bg-mint/20 text-sage border-2 border-mint"
-                    : isFull
-                    ? "bg-sand text-bark cursor-not-allowed"
-                    : "bg-forest text-cream hover:bg-moss"
-                )}
-              >
-                {joining ? "Загрузка…" : joined ? "✓ Ты записан" : isFull ? "Мест нет" : isSignedIn ? "Записаться" : "Войти чтобы записаться"}
-              </button>
+              {!isCreator && (
+                <button
+                  onClick={handleJoin}
+                  disabled={joining || (isFull && !joined)}
+                  className={cn(
+                    "w-full py-4 rounded-2xl font-unbounded font-bold text-sm transition-all duration-200 active:scale-95 disabled:opacity-50",
+                    joined
+                      ? "bg-mint/20 text-sage border-2 border-mint"
+                      : isFull
+                      ? "bg-sand text-bark cursor-not-allowed"
+                      : "bg-forest text-cream hover:bg-moss"
+                  )}
+                >
+                  {joining ? "Загрузка…" : joined ? "✓ Ты записан" : isFull ? "Мест нет" : isSignedIn ? "Записаться" : "Войти чтобы записаться"}
+                </button>
+              )}
 
-              {joined && (
+              {isCreator && (
+                <div className="w-full py-4 rounded-2xl bg-sage/10 text-sage text-center font-unbounded font-bold text-sm border-2 border-sage/30">
+                  ✓ Ты организатор
+                </div>
+              )}
+
+              {joined && !isCreator && (
                 <p className="text-center text-xs text-sage mt-3 font-golos">
                   Организатор получил уведомление 🎉
                 </p>
