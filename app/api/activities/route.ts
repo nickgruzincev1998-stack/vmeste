@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { title, description, categoryId, date, placeName, lat, lng, difficulty, maxParticipants } = body;
 
-    if (!title || !description || !categoryId || !date || !placeName) {
+    if (!title || !categoryId || !date || !placeName) {
       return NextResponse.json({ error: "Заполните все обязательные поля" }, { status: 400 });
     }
 
