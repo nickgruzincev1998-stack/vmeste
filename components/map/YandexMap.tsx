@@ -29,15 +29,10 @@ const YandexMap = forwardRef<YandexMapHandle, Props>(({ activities = [], onMapRe
   useImperativeHandle(ref, () => ({
    async searchAddress(address: string) {
   try {
-    const key = process.env.NEXT_PUBLIC_YANDEX_GEOCODER_KEY;
-    const url = `https://geocode-maps.yandex.ru/1.x/?apikey=${key}&geocode=${encodeURIComponent(address)}&format=json&results=1`;
-    const res = await fetch(url);
+    const res = await fetch(`/api/geocode?address=${encodeURIComponent(address)}`);
+    if (!res.ok) return null;
     const data = await res.json();
-    const members = data?.response?.GeoObjectCollection?.featureMember;
-    if (!members || members.length === 0) return null;
-    const pos = members[0].GeoObject.Point.pos as string;
-    const [lng, lat] = pos.split(" ").map(Number);
-    return { lat, lng };
+    return { lat: data.lat, lng: data.lng };
   } catch (e) {
     console.error("geocode error:", e);
     return null;
