@@ -91,7 +91,8 @@ export async function POST(
       where: { userId_activityId: { userId: user.id, activityId: id } },
     });
 
-    if (existing) {
+    // Если уже активный участник — выходим
+    if (existing && existing.status === "active") {
       await db.participation.update({
         where: { userId_activityId: { userId: user.id, activityId: id } },
         data: { status: "left" },
@@ -99,10 +100,12 @@ export async function POST(
       return NextResponse.json({ joined: false, message: "Вы покинули событие" });
     }
 
+    // Проверяем лимит
     if (activity._count.participants >= activity.maxParticipants) {
       return NextResponse.json({ error: "Событие заполнено" }, { status: 400 });
     }
 
+    // Вступаем или возвращаемся
     await db.participation.upsert({
       where: { userId_activityId: { userId: user.id, activityId: id } },
       update: { status: "active" },
