@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, X, MapPin, ChevronRight } from "lucide-react";
 import ActivityCard from "@/components/activity/ActivityCard";
 import CitySelector from "@/components/shared/CitySelector";
 import { CATEGORIES } from "@/types";
@@ -14,23 +14,21 @@ const difficulties = [
   { value: "advanced",     label: "Продвинутый" },
 ];
 
+type Step = "city" | "category" | "results";
+
 export default function FeedPage() {
+  const [step, setStep] = useState<Step>("city");
   const [activities, setActivities] = useState<any[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [search, setSearch]         = useState("");
-  const [cat, setCat]               = useState("all");
-  const [diff, setDiff]             = useState("all");
-  const [city, setCity]             = useState(() => {
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selectedCats, setSelectedCats] = useState<string[]>([]);
+  const [diff, setDiff] = useState("all");
+  const [city, setCity] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("selectedCity") || "";
     }
     return "";
   });
-  const [filtersOpen, setFiltersOpen] = useState(false);
-
-  useEffect(() => {
-    fetchActivities();
-  }, [cat, diff, search, city]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -38,18 +36,27 @@ export default function FeedPage() {
     }
   }, [city]);
 
+  useEffect(() => {
+    if (step === "results") fetchActivities();
+  }, [step, selectedCats, diff, search, city]);
+
   async function fetchActivities() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (cat !== "all") params.set("cat", cat);
+      if (selectedCats.length === 1) params.set("cat", selectedCats[0]);
       if (diff !== "all") params.set("diff", diff);
       if (search) params.set("q", search);
       if (city) params.set("city", city);
-
       const res = await fetch(`/api/activities?${params}`);
       const data = await res.json();
-      setActivities(Array.isArray(data) ? data : []);
+      let result = Array.isArray(data) ? data : [];
+      if (selectedCats.length > 1) {
+        result = result.filter((a: any) =>
+          selectedCats.includes(a.category?.slug)
+        );
+      }
+      setActivities(result);
     } catch {
       setActivities([]);
     } finally {
@@ -57,11 +64,26 @@ export default function FeedPage() {
     }
   }
 
-  function reset() {
-    setSearch(""); setCat("all"); setDiff("all");
+  function toggleCat(slug: string) {
+    setSelectedCats((prev) =>
+      prev.includes(slug) ? prev.filter((c) => c !== slug) : [...prev, slug]
+    );
   }
 
-  const hasFilters = cat !== "all" || diff !== "all" || search !== "";
+  function handleCityNext() {
+    setStep("category");
+  }
+
+  function handleCategoryNext() {
+    setStep("results");
+  }
+
+  function reset() {
+    setStep("city");
+    setSelectedCats([]);
+    setDiff("all");
+    setSearch("");
+  }
 
   function mapActivity(a: any) {
     return {
@@ -78,125 +100,197 @@ export default function FeedPage() {
     };
   }
 
-  return (
-    <div className="min-h-screen bg-cream">
-      <div className="bg-forest text-cream py-10 px-4">
-        <div className="max-w-7xl mx-auto">
-          <span className="text-mint text-xs font-semibold uppercase tracking-widest">Лента событий</span>
-          <h1 className="font-unbounded font-black text-3xl md:text-4xl mt-2 mb-6">Найди игру</h1>
+  // STEP 1 — ГОРОД
+  if (step === "city") {
+    return (
+      <div className="min-h-screen bg-forest flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 bg-mint/15 border border-mint/30 text-mint text-xs font-semibold px-4 py-2 rounded-full mb-6">
+              <span className="w-1.5 h-1.5 rounded-full bg-mint animate-pulse" />
+              Шаг 1 из 2
+            </div>
+            <h1 className="font-unbounded font-black text-cream text-3xl md:text-4xl mb-3">
+              Выбери город
+            </h1>
+            <p className="text-cream/50 font-golos text-sm">
+              Найдём игры рядом с тобой
+            </p>
+          </div>
 
-          {/* City selector */}
-          <div className="max-w-xs">
-            <div className="text-cream/60 text-xs font-golos mb-2">Твой город</div>
+          <div className="bg-white/10 backdrop-blur rounded-3xl p-6 mb-4">
+            <div className="flex items-center gap-2 text-cream/60 text-xs font-golos mb-3">
+              <MapPin size={14} />
+              Твой город
+            </div>
             <CitySelector value={city} onChange={setCity} />
+          </div>
+
+          <button
+            onClick={handleCityNext}
+            className="w-full py-4 bg-mint text-forest font-unbounded font-bold text-sm rounded-2xl hover:bg-sage transition-colors flex items-center justify-center gap-2"
+          >
+            {city ? `Ищем в ${city}` : "Искать везде"}
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // STEP 2 — КАТЕГОРИИ
+  if (step === "category") {
+    return (
+      <div className="min-h-screen bg-forest px-4 py-12">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 bg-mint/15 border border-mint/30 text-mint text-xs font-semibold px-4 py-2 rounded-full mb-6">
+              <span className="w-1.5 h-1.5 rounded-full bg-mint animate-pulse" />
+              Шаг 2 из 2
+            </div>
+            <h1 className="font-unbounded font-black text-cream text-3xl md:text-4xl mb-3">
+              Выбери досуг
+            </h1>
+            <p className="text-cream/50 font-golos text-sm">
+              Можно выбрать несколько
+            </p>
+          </div>
+
+          {/* Категории */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+            {CATEGORIES.map((cat) => {
+              const isSelected = selectedCats.includes(cat.slug);
+              return (
+                <button
+                  key={cat.slug}
+                  onClick={() => toggleCat(cat.slug)}
+                  className={cn(
+                    "flex flex-col items-center gap-2 p-5 rounded-2xl border-2 transition-all text-center",
+                    isSelected
+                      ? "border-mint bg-mint/20 text-cream"
+                      : "border-white/10 bg-white/5 text-cream/70 hover:border-white/30 hover:bg-white/10"
+                  )}
+                >
+                  <span className="text-4xl">{cat.icon}</span>
+                  <span className="font-unbounded font-bold text-xs">{cat.nameRu}</span>
+                  {isSelected && (
+                    <span className="text-mint text-xs font-golos">✓ Выбрано</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Сложность */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-6">
+            <div className="text-cream/60 text-xs font-golos uppercase tracking-wide mb-3">Уровень</div>
+            <div className="flex flex-wrap gap-2">
+              {difficulties.map((d) => (
+                <button
+                  key={d.value}
+                  onClick={() => setDiff(d.value)}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-golos font-medium transition-all",
+                    diff === d.value
+                      ? "bg-mint text-forest"
+                      : "bg-white/10 text-cream/60 hover:bg-white/20"
+                  )}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setStep("city")}
+              className="px-6 py-4 rounded-2xl border border-white/20 text-cream/60 hover:text-cream font-golos text-sm transition-colors"
+            >
+              ← Назад
+            </button>
+            <button
+              onClick={handleCategoryNext}
+              className="flex-1 py-4 bg-mint text-forest font-unbounded font-bold text-sm rounded-2xl hover:bg-sage transition-colors flex items-center justify-center gap-2"
+            >
+              {selectedCats.length > 0
+                ? `Найти игры (${selectedCats.length} категор.)`
+                : "Найти все игры"}
+              <ChevronRight size={18} />
+            </button>
           </div>
         </div>
       </div>
+    );
+  }
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* City notice */}
-        {city && (
-          <div className="flex items-center gap-2 bg-mint/10 border border-mint/20 rounded-2xl px-4 py-3 mb-6">
-            <span className="text-sage text-sm font-golos">
-              🗺️ Показываем игры в городе <strong>{city}</strong>
-            </span>
+  // STEP 3 — РЕЗУЛЬТАТЫ
+  return (
+    <div className="min-h-screen bg-cream">
+      <div className="bg-forest text-cream py-8 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-3 mb-4">
             <button
-              onClick={() => setCity("")}
-              className="ml-auto text-bark hover:text-forest text-xs font-golos underline transition-colors"
+              onClick={() => setStep("category")}
+              className="text-cream/60 hover:text-cream text-sm font-golos transition-colors"
             >
-              Показать все
+              ← Назад
+            </button>
+            <button
+              onClick={reset}
+              className="ml-auto flex items-center gap-1.5 text-cream/60 hover:text-cream text-xs font-golos transition-colors"
+            >
+              <X size={14} /> Сначала
             </button>
           </div>
-        )}
 
-        {/* Search */}
+          <h1 className="font-unbounded font-black text-2xl md:text-3xl mb-1">
+            {city ? `Игры в ${city}` : "Все игры"}
+          </h1>
+          <p className="text-cream/50 text-sm font-golos">
+            {selectedCats.length > 0
+              ? selectedCats.map(s => CATEGORIES.find(c => c.slug === s)?.nameRu).join(", ")
+              : "Все категории"}
+            {diff !== "all" && ` · ${difficulties.find(d => d.value === diff)?.label}`}
+          </p>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Поиск */}
         <div className="flex gap-3 mb-6">
           <div className="flex-1 relative">
             <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-bark" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск по названию или месту…"
+              placeholder="Поиск по названию…"
               className="w-full bg-white border border-forest/15 rounded-full pl-11 pr-4 py-3 text-sm font-golos outline-none focus:border-sage transition-colors"
             />
           </div>
-          <button
-            onClick={() => setFiltersOpen(!filtersOpen)}
-            className={cn(
-              "flex items-center gap-2 px-4 py-3 rounded-full border text-sm font-golos font-medium transition-all",
-              filtersOpen || hasFilters
-                ? "bg-forest text-cream border-forest"
-                : "bg-white border-forest/15 text-forest hover:border-sage"
-            )}
-          >
-            <SlidersHorizontal size={16} />
-            Фильтры
-            {hasFilters && <span className="w-2 h-2 rounded-full bg-mint" />}
-          </button>
-          {hasFilters && (
-            <button
-              onClick={reset}
-              className="flex items-center gap-1.5 px-4 py-3 rounded-full bg-sand border border-forest/10 text-sm text-bark hover:text-forest transition-colors"
-            >
-              <X size={14} /> Сбросить
-            </button>
-          )}
         </div>
 
-        {/* Filters */}
-        {filtersOpen && (
-          <div className="bg-white rounded-2xl border border-forest/10 p-5 mb-6 space-y-5">
-            <div>
-              <div className="text-xs font-semibold text-bark uppercase tracking-wide mb-3">Категория</div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setCat("all")}
-                  className={cn("px-3.5 py-1.5 rounded-full text-sm font-golos font-medium border transition-all",
-                    cat === "all" ? "bg-forest text-cream border-forest" : "bg-sand border-forest/10 text-bark hover:border-sage"
-                  )}
-                >
-                  Все
-                </button>
-                {CATEGORIES.map((c) => (
-                  <button
-                    key={c.slug}
-                    onClick={() => setCat(c.slug)}
-                    className={cn("px-3.5 py-1.5 rounded-full text-sm font-golos font-medium border transition-all flex items-center gap-1.5",
-                      cat === c.slug ? "bg-forest text-cream border-forest" : "bg-sand border-forest/10 text-bark hover:border-sage"
-                    )}
-                  >
-                    <span>{c.icon}</span>{c.nameRu}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs font-semibold text-bark uppercase tracking-wide mb-3">Сложность</div>
-              <div className="flex flex-wrap gap-2">
-                {difficulties.map((d) => (
-                  <button
-                    key={d.value}
-                    onClick={() => setDiff(d.value)}
-                    className={cn("px-3.5 py-1.5 rounded-full text-sm font-golos font-medium border transition-all",
-                      diff === d.value ? "bg-forest text-cream border-forest" : "bg-sand border-forest/10 text-bark hover:border-sage"
-                    )}
-                  >
-                    {d.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+        {/* Выбранные категории */}
+        {selectedCats.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-5">
+            {selectedCats.map((slug) => {
+              const cat = CATEGORIES.find((c) => c.slug === slug);
+              return (
+                <span key={slug} className="flex items-center gap-1.5 px-3 py-1.5 bg-forest text-cream text-xs font-golos rounded-full">
+                  {cat?.icon} {cat?.nameRu}
+                  <button onClick={() => toggleCat(slug)} className="ml-1 hover:text-red-300">×</button>
+                </span>
+              );
+            })}
           </div>
         )}
 
-        {/* Results count */}
         <div className="flex items-center justify-between mb-5">
           <span className="text-sm text-bark">
-            {loading ? "Загрузка..." : activities.length === 0 ? "Игр не найдено" : `${activities.length} игр`}
+            {loading ? "Загрузка..." : `${activities.length} игр найдено`}
           </span>
         </div>
 
-        {/* Grid */}
         {loading ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -211,19 +305,13 @@ export default function FeedPage() {
           </div>
         ) : (
           <div className="text-center py-24">
-            <div className="text-6xl mb-4">{city ? "🗺️" : "🔍"}</div>
-            <h3 className="font-unbounded font-bold text-forest text-xl mb-2">
-              {city ? `В городе ${city} пока нет игр` : "Ничего не найдено"}
-            </h3>
-            <p className="text-bark text-sm mb-6">
-              {city ? "Создай первую игру в своём городе!" : "Попробуй сбросить фильтры"}
-            </p>
-            <div className="flex gap-3 justify-center flex-wrap">
-              {city && (
-                <button onClick={() => setCity("")} className="btn-ghost-dark inline-flex text-sm px-5 py-2.5 border border-forest/20 rounded-full text-bark hover:text-forest transition-colors">
-                  Показать все города
-                </button>
-              )}
+            <div className="text-6xl mb-4">🔍</div>
+            <h3 className="font-unbounded font-bold text-forest text-xl mb-2">Игр не найдено</h3>
+            <p className="text-bark text-sm mb-6">Попробуй изменить фильтры или создай свою игру</p>
+            <div className="flex gap-3 justify-center">
+              <button onClick={() => setStep("category")} className="px-6 py-3 rounded-full border border-forest/20 text-forest text-sm font-golos hover:border-forest transition-colors">
+                Изменить фильтры
+              </button>
               <a href="/activities/create" className="btn-dark inline-flex">Создать игру</a>
             </div>
           </div>

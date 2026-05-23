@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import { MapPin } from "lucide-react";
+import * as maptilersdk from "@maptiler/sdk";
 
 interface Suggestion {
-  display_name: string;
-  lat: string;
-  lon: string;
+  name: string;
+  lat: number;
+  lng: number;
 }
 
 interface Props {
@@ -22,6 +23,8 @@ export default function AddressInput({ value, onChange, placeholder }: Props) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
+  maptilersdk.config.apiKey = "4gsAO4IEWVYOJzsCiMz0";
+
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -33,14 +36,18 @@ export default function AddressInput({ value, onChange, placeholder }: Props) {
   }, []);
 
   async function search(q: string) {
-    if (q.length < 3) { setSuggestions([]); setOpen(false); return; }
+    if (q.length < 2) { setSuggestions([]); setOpen(false); return; }
     setLoading(true);
     try {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&accept-language=ru&countrycodes=ru,kz,by,uz`;
-      const res = await fetch(url, {
-        headers: { "Accept-Language": "ru", "User-Agent": "vmeste-leisure-app/1.0" },
+      const result = await maptilersdk.geocoding.forward(q, {
+        language: maptilersdk.Language.RUSSIAN,
+        limit: 5,
       });
-      const data: Suggestion[] = await res.json();
+      const data = result.features.map((f: any) => ({
+        name: f.place_name_ru || f.place_name,
+        lat: f.center[1],
+        lng: f.center[0],
+      }));
       setSuggestions(data);
       setOpen(data.length > 0);
     } catch {
@@ -54,12 +61,11 @@ export default function AddressInput({ value, onChange, placeholder }: Props) {
     const val = e.target.value;
     onChange(val);
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => search(val), 500);
+    timer.current = setTimeout(() => search(val), 300);
   }
 
   function handleSelect(s: Suggestion) {
-    const shortName = s.display_name.split(",").slice(0, 3).join(",").trim();
-    onChange(shortName, parseFloat(s.lat), parseFloat(s.lon));
+    onChange(s.name, s.lat, s.lng);
     setSuggestions([]);
     setOpen(false);
   }
@@ -93,10 +99,7 @@ export default function AddressInput({ value, onChange, placeholder }: Props) {
               className="w-full text-left px-4 py-3 text-sm font-golos hover:bg-sand transition-colors flex items-start gap-3 border-b border-forest/5 last:border-0"
             >
               <MapPin size={14} className="text-sage flex-shrink-0 mt-0.5" />
-              <div>
-                <div className="text-forest font-medium line-clamp-1">{s.display_name.split(",")[0]}</div>
-                <div className="text-bark text-xs line-clamp-1 mt-0.5">{s.display_name.split(",").slice(1, 3).join(",")}</div>
-              </div>
+              <span className="text-forest">{s.name}</span>
             </button>
           ))}
         </div>
