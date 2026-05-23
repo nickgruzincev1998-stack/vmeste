@@ -1,16 +1,8 @@
 "use client";
 
 import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-
-// Фикс иконок Leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+import * as maptilersdk from "@maptiler/sdk";
+import "@maptiler/sdk/dist/maptiler-sdk.css";
 
 interface Activity {
   id: string;
@@ -32,51 +24,58 @@ export interface MapHandle {
 
 const Map = forwardRef<MapHandle, Props>(({ activities = [], onMapReady }, ref) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<L.Map | null>(null);
+  const mapInstance = useRef<maptilersdk.Map | null>(null);
 
   useImperativeHandle(ref, () => ({
     async searchAddress(address: string) {
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
-          { headers: { "Accept-Language": "ru" } }
-        );
-        const data = await res.json();
-        if (!data || data.length === 0) return null;
-        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        const result = await maptilersdk.geocoding.forward(address, {
+          language: maptilersdk.LanguageGeocoding.RUSSIAN,
+          country: "ru",
+          limit: 1,
+        });
+        const feature = result.features[0];
+        if (!feature) return null;
+        const [lng, lat] = feature.center;
+        return { lat, lng };
       } catch {
         return null;
       }
     },
     setCenter(lat: number, lng: number, zoom = 13) {
-      mapInstance.current?.setView([lat, lng], zoom);
+      mapInstance.current?.flyTo({ center: [lng, lat], zoom });
     },
   }));
 
   useEffect(() => {
     if (!mapRef.current || mapInstance.current) return;
 
-    mapInstance.current = L.map(mapRef.current, {
-      center: [55.751, 37.618],
+    maptilersdk.config.apiKey = "4gsAO4IEWVYOJzsCiMz0";
+
+    mapInstance.current = new maptilersdk.Map({
+      container: mapRef.current,
+      style: maptilersdk.MapStyle.STREETS,
+      center: [37.618, 55.751],
       zoom: 11,
     });
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap contributors",
-    }).addTo(mapInstance.current);
+    mapInstance.current.on("load", () => {
+      activities.forEach((a) => {
+        const popup = new maptilersdk.Popup({ offset: 25 }).setHTML(`
+          <div style="padding:4px;min-width:160px;">
+            <div style="font-weight:bold;margin-bottom:4px;">${a.icon} ${a.title}</div>
+            <a href="/activities/${a.id}" style="color:#2d5a3d;font-size:13px;">Подробнее →</a>
+          </div>
+        `);
 
-    activities.forEach((a) => {
-      const marker = L.marker([a.lat, a.lng]);
-      marker.bindPopup(`
-        <div style="padding:4px;min-width:160px;">
-          <div style="font-weight:bold;margin-bottom:4px;">${a.icon} ${a.title}</div>
-          <a href="/activities/${a.id}" style="color:#2d5a3d;font-size:13px;">Подробнее →</a>
-        </div>
-      `);
-      marker.addTo(mapInstance.current!);
+        new maptilersdk.Marker({ color: "#2d5a3d" })
+          .setLngLat([a.lng, a.lat])
+          .setPopup(popup)
+          .addTo(mapInstance.current!);
+      });
+
+      onMapReady?.();
     });
-
-    onMapReady?.();
 
     return () => {
       mapInstance.current?.remove();
