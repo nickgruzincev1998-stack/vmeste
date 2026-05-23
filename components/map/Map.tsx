@@ -30,7 +30,7 @@ const Map = forwardRef<MapHandle, Props>(({ activities = [], onMapReady }, ref) 
     async searchAddress(address: string) {
       try {
         const result = await maptilersdk.geocoding.forward(address, {
-          language: maptilersdk.LanguageGeocoding.RUSSIAN,
+          language: maptilersdk.Language.RUSSIAN,
           country: "ru",
           limit: 1,
         });
