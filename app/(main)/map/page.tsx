@@ -4,9 +4,9 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import ActivityCard from "@/components/activity/ActivityCard";
 import { Search, MapPin, Loader2 } from "lucide-react";
-import { YandexMapHandle } from "@/components/map/YandexMap";
+import { MapHandle } from "@/components/map/Map";
 
-const YandexMap = dynamic(() => import("@/components/map/YandexMap"), {
+const Map = dynamic(() => import("@/components/map/Map"), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full bg-moss/20 rounded-3xl flex items-center justify-center">
@@ -20,7 +20,8 @@ function getDistance(lat1: number, lng1: number, lat2: number, lng2: number) {
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
   const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -31,7 +32,7 @@ export default function MapPage() {
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [radius, setRadius] = useState(10);
   const [mapReady, setMapReady] = useState(false);
-  const mapRef = useRef<YandexMapHandle>(null);
+  const mapRef = useRef<MapHandle>(null);
 
   useEffect(() => {
     fetch("/api/activities")
@@ -81,7 +82,6 @@ export default function MapPage() {
           <span className="text-mint text-xs font-semibold uppercase tracking-widest">Карта</span>
           <h1 className="font-unbounded font-black text-cream text-3xl mt-2">События на карте</h1>
 
-          {/* Поиск */}
           <div className="mt-6 flex gap-3 max-w-2xl">
             <div className="flex-1 flex items-center gap-2 bg-white/10 backdrop-blur rounded-2xl px-4 py-3">
               <MapPin size={18} className="text-mint flex-shrink-0" />
@@ -103,10 +103,9 @@ export default function MapPage() {
             </button>
           </div>
 
-          {/* Радиус */}
           {center && (
             <div className="mt-3 flex items-center gap-3">
-              <span className="text-cream/70 text-xs font-golos">Радиус поиска:</span>
+              <span className="text-cream/70 text-xs font-golos">Радиус:</span>
               {[5, 10, 20, 50].map((r) => (
                 <button
                   key={r}
@@ -125,7 +124,7 @@ export default function MapPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="rounded-3xl overflow-hidden border border-forest/10 mb-8" style={{ height: 500 }}>
-          <YandexMap
+          <Map
             ref={mapRef}
             activities={mapActivities}
             onMapReady={() => setMapReady(true)}
@@ -169,8 +168,8 @@ export default function MapPage() {
             <h3 className="font-unbounded font-bold text-forest text-xl mb-2">
               {center ? "Нет событий поблизости" : "Событий пока нет"}
             </h3>
-            <p className="text-bark text-sm mb-6">
-              {center ? `Попробуйте увеличить радиус поиска` : "Создай первое событие!"}
+            <p className="text-bark text-sm">
+              {center ? "Попробуйте увеличить радиус" : "Создай первое событие!"}
             </p>
           </div>
         )}
