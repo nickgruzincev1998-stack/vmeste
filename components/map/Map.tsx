@@ -31,7 +31,7 @@ const Map = forwardRef<MapHandle, Props>(({ activities = [], onMapReady }, ref) 
       try {
         const result = await maptilersdk.geocoding.forward(address, {
           language: maptilersdk.Language.RUSSIAN,
-          country: "ru",
+          countries: ["ru"],
           limit: 1,
         });
         const feature = result.features[0];
