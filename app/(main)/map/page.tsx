@@ -147,6 +147,7 @@ export default function MapPage() {
     lat: a.lat ?? 55.751,
     lng: a.lng ?? 37.618,
     icon: a.category?.icon ?? "📍",
+    avatar: a.creator?.avatar ?? null,
   }));
 
   return (

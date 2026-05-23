@@ -10,6 +10,7 @@ interface Activity {
   lat: number;
   lng: number;
   icon: string;
+  avatar?: string | null;
 }
 
 interface Props {
@@ -174,6 +175,69 @@ const Map = forwardRef<MapHandle, Props>(({ activities = [], onMapReady }, ref) 
       mapInstance.current = null;
     };
   }, []);
+
+  // Обновляем маркеры когда меняются activities
+  useEffect(() => {
+    if (!mapInstance.current) return;
+    const map = mapInstance.current;
+
+    // Ждём пока карта загрузится
+    if (!map.loaded()) {
+      map.on("load", () => updateMarkers());
+    } else {
+      updateMarkers();
+    }
+
+    function updateMarkers() {
+      // Удаляем старые маркеры
+      const markers = (map as any)._markers || [];
+      markers.forEach((m: any) => m.remove());
+      (map as any)._markers = [];
+
+      // Добавляем новые
+      activities.forEach((a) => {
+        const popup = new maptilersdk.Popup({ offset: 25 }).setHTML(`
+          <div style="padding:4px;min-width:160px;">
+            <div style="font-weight:bold;margin-bottom:4px;">${a.icon} ${a.title}</div>
+            <a href="/activities/${a.id}" style="color:#2d5a3d;font-size:13px;">Подробнее →</a>
+          </div>
+        `);
+
+        // Создаём кастомный маркер с аватаркой
+        const el = document.createElement("div");
+        el.style.cssText = `
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          border: 3px solid #2d5a3d;
+          overflow: hidden;
+          cursor: pointer;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          background: #2d5a3d;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 18px;
+        `;
+
+        if (a.avatar) {
+          const img = document.createElement("img");
+          img.src = a.avatar;
+          img.style.cssText = "width:100%;height:100%;object-fit:cover;";
+          img.onerror = () => { el.textContent = a.icon; };
+          el.appendChild(img);
+        } else {
+          el.textContent = a.icon;
+        }
+
+        const marker = new maptilersdk.Marker({ element: el })
+          .setLngLat([a.lng, a.lat])
+          .setPopup(popup)
+          .addTo(map);
+        ((map as any)._markers = (map as any)._markers || []).push(marker);
+      });
+    }
+  }, [activities]);
 
   return <div ref={mapRef} style={{ width: "100%", height: "100%" }} />;
 });
