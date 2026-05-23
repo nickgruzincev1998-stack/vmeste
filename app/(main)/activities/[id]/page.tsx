@@ -52,10 +52,17 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       });
   }, [isSignedIn]);
 
+  // Проверяем создатель ли и записан ли
   useEffect(() => {
-    if (activity && dbUserId && activity.creatorId === dbUserId) {
+    if (!activity || !dbUserId) return;
+    if (activity.creatorId === dbUserId) {
       setJoined(true);
+      return;
     }
+    const isAlreadyJoined = activity.participants?.some(
+      (p: any) => p.user?.id === dbUserId && p.status === "active"
+    );
+    if (isAlreadyJoined) setJoined(true);
   }, [activity, dbUserId]);
 
   async function handleJoin() {
@@ -108,7 +115,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
 
   if (!activity) return null;
 
-  const currentParticipants = activity._count?.participants ?? 0;
+  const currentParticipants = Math.max(0, activity._count?.participants ?? 0);
   const spotsLeft = activity.maxParticipants - currentParticipants;
   const isFull = spotsLeft <= 0;
   const diff = diffLabel[activity.difficulty] ?? { label: activity.difficulty, cls: "bg-gray-100 text-gray-800" };
@@ -191,7 +198,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                 <div className="h-2 bg-sand rounded-full overflow-hidden">
                   <div
                     className={cn("h-full rounded-full", isFull ? "bg-red-400" : "bg-mint")}
-                    style={{ width: `${Math.round((currentParticipants / activity.maxParticipants) * 100)}%` }}
+                    style={{ width: `${Math.min(100, Math.round((currentParticipants / activity.maxParticipants) * 100))}%` }}
                   />
                 </div>
               </div>
