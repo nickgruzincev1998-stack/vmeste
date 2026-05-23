@@ -1,12 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { ArrowLeft, ArrowRight, Check, Calendar } from "lucide-react";
 import { CATEGORIES } from "@/types";
 import { cn } from "@/lib/utils";
 import AddressInput from "@/components/shared/AddressInput";
+import dynamic from "next/dynamic";
+import { MapHandle } from "@/components/map/Map";
+
+const Map = dynamic(() => import("@/components/map/Map"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full bg-moss/20 rounded-2xl flex items-center justify-center">
+      <div className="text-forest font-golos text-sm">Загрузка карты…</div>
+    </div>
+  ),
+});
 
 const difficulties = [
   { value: "beginner",     label: "Новичок",     desc: "Подходит всем" },
@@ -21,6 +32,8 @@ interface FormData {
   date: string;
   time: string;
   placeName: string;
+  lat?: number;
+  lng?: number;
   maxParticipants: number;
   difficulty: string;
 }
@@ -28,6 +41,7 @@ interface FormData {
 const EMPTY: FormData = {
   categoryId: "", title: "", description: "",
   date: "", time: "", placeName: "",
+  lat: undefined, lng: undefined,
   maxParticipants: 10, difficulty: "beginner",
 };
 
@@ -39,9 +53,19 @@ export default function CreateActivityPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const mapRef = useRef<MapHandle>(null);
+  const markerRef = useRef<any>(null);
 
   function set<K extends keyof FormData>(key: K, val: FormData[K]) {
     setForm((prev) => ({ ...prev, [key]: val }));
+  }
+
+  function handleAddressChange(val: string, lat?: number, lng?: number) {
+    setForm((prev) => ({ ...prev, placeName: val, lat, lng }));
+    if (lat && lng) {
+      mapRef.current?.setCenter(lat, lng, 15);
+      mapRef.current?.setSearchMarker(lat, lng);
+    }
   }
 
   function canNext() {
@@ -58,7 +82,10 @@ export default function CreateActivityPage() {
       const res = await fetch("/api/activities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          date: form.date && form.time ? `${form.date}T${form.time}` : form.date,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Ошибка"); setLoading(false); return; }
@@ -188,10 +215,34 @@ export default function CreateActivityPage() {
               <label className="block text-xs font-semibold text-bark uppercase tracking-wide mb-2">Место</label>
               <AddressInput
                 value={form.placeName}
-                onChange={(val) => set("placeName", val)}
+                onChange={handleAddressChange}
                 placeholder="Парк Горького, центральный вход"
               />
+              <p className="text-xs text-bark/60 mt-2 font-golos">
+                Выберите адрес из подсказок — он отобразится на карте
+              </p>
             </div>
+
+            {/* Мини-карта */}
+            <div className="rounded-2xl overflow-hidden border border-forest/10" style={{ height: 280 }}>
+              <Map
+                ref={mapRef}
+                activities={form.lat && form.lng ? [{
+                  id: "preview",
+                  title: form.placeName,
+                  lat: form.lat,
+                  lng: form.lng,
+                  icon: selectedCat?.icon ?? "📍",
+                }] : []}
+                onMapReady={() => {
+                  if (form.lat && form.lng) {
+                    mapRef.current?.setCenter(form.lat, form.lng, 15);
+                    mapRef.current?.setSearchMarker(form.lat, form.lng);
+                  }
+                }}
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-bark uppercase tracking-wide mb-2">Дата</label>
@@ -271,7 +322,6 @@ export default function CreateActivityPage() {
               </div>
             </div>
 
-            {/* Preview */}
             <div className="bg-white rounded-2xl border border-forest/10 p-5">
               <div className="text-xs font-semibold text-bark uppercase tracking-wide mb-4">Предпросмотр</div>
               <div className="flex items-start gap-3">
@@ -297,7 +347,6 @@ export default function CreateActivityPage() {
           </div>
         )}
 
-        {/* Navigation */}
         <div className="flex justify-between mt-10">
           {step > 1 ? (
             <button

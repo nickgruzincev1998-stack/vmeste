@@ -11,7 +11,7 @@ interface Suggestion {
 
 interface Props {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (value: string, lat?: number, lng?: number) => void;
   placeholder?: string;
 }
 
@@ -33,26 +33,17 @@ export default function AddressInput({ value, onChange, placeholder }: Props) {
   }, []);
 
   async function search(q: string) {
-    if (q.length < 3) {
-      setSuggestions([]);
-      setOpen(false);
-      return;
-    }
+    if (q.length < 3) { setSuggestions([]); setOpen(false); return; }
     setLoading(true);
     try {
       const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&accept-language=ru&countrycodes=ru,kz,by,uz`;
       const res = await fetch(url, {
-        headers: {
-          "Accept-Language": "ru",
-          "User-Agent": "vmeste-leisure-app/1.0 (contact@vmeste.app)",
-        },
+        headers: { "Accept-Language": "ru", "User-Agent": "vmeste-leisure-app/1.0" },
       });
-      if (!res.ok) throw new Error("Network error");
       const data: Suggestion[] = await res.json();
       setSuggestions(data);
       setOpen(data.length > 0);
-    } catch (e) {
-      console.error("Address search error:", e);
+    } catch {
       setSuggestions([]);
     } finally {
       setLoading(false);
@@ -67,9 +58,8 @@ export default function AddressInput({ value, onChange, placeholder }: Props) {
   }
 
   function handleSelect(s: Suggestion) {
-    // Берём только первую часть адреса (до первой запятой) для краткости
     const shortName = s.display_name.split(",").slice(0, 3).join(",").trim();
-    onChange(shortName);
+    onChange(shortName, parseFloat(s.lat), parseFloat(s.lon));
     setSuggestions([]);
     setOpen(false);
   }
@@ -104,12 +94,8 @@ export default function AddressInput({ value, onChange, placeholder }: Props) {
             >
               <MapPin size={14} className="text-sage flex-shrink-0 mt-0.5" />
               <div>
-                <div className="text-forest font-medium line-clamp-1">
-                  {s.display_name.split(",")[0]}
-                </div>
-                <div className="text-bark text-xs line-clamp-1 mt-0.5">
-                  {s.display_name.split(",").slice(1, 3).join(",")}
-                </div>
+                <div className="text-forest font-medium line-clamp-1">{s.display_name.split(",")[0]}</div>
+                <div className="text-bark text-xs line-clamp-1 mt-0.5">{s.display_name.split(",").slice(1, 3).join(",")}</div>
               </div>
             </button>
           ))}

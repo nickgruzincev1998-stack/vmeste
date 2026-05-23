@@ -29,9 +29,9 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const [loading, setLoading]   = useState(true);
   const [joined, setJoined]     = useState(false);
   const [joining, setJoining]   = useState(false);
+  const [completing, setCompleting] = useState(false);
   const [dbUserId, setDbUserId] = useState<string | undefined>(undefined);
 
-  // Загружаем событие
   useEffect(() => {
     fetch(`/api/activities/${id}`)
       .then((r) => r.json())
@@ -43,7 +43,6 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Загружаем текущего пользователя
   useEffect(() => {
     if (!isSignedIn) return;
     fetch("/api/users/me")
@@ -53,7 +52,6 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       });
   }, [isSignedIn]);
 
-  // Когда оба загружены — проверяем является ли создателем
   useEffect(() => {
     if (activity && dbUserId && activity.creatorId === dbUserId) {
       setJoined(true);
@@ -63,7 +61,6 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   async function handleJoin() {
     if (!isSignedIn) { router.push("/sign-in"); return; }
     if (!activity) return;
-
     setJoining(true);
     try {
       const res = await fetch(`/api/activities/${id}`, { method: "POST" });
@@ -79,6 +76,22 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
       }
     } finally {
       setJoining(false);
+    }
+  }
+
+  async function handleComplete() {
+    if (!confirm("Завершить событие? Участники смогут оставить отзывы.")) return;
+    setCompleting(true);
+    try {
+      const res = await fetch(`/api/activities/${id}/complete`, { method: "PATCH" });
+      if (res.ok) {
+        router.push(`/activities/${id}/review`);
+      } else {
+        const data = await res.json();
+        alert(data.error || "Ошибка");
+      }
+    } finally {
+      setCompleting(false);
     }
   }
 
@@ -124,6 +137,11 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                 <span className={cn("text-xs font-golos font-semibold px-3 py-1.5 rounded-full", diff.cls)}>
                   {diff.label}
                 </span>
+                {activity.status === "completed" && (
+                  <span className="text-xs font-golos font-semibold px-3 py-1.5 rounded-full bg-gray-100 text-gray-600">
+                    Завершено
+                  </span>
+                )}
               </div>
             </div>
 
@@ -178,7 +196,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                 </div>
               </div>
 
-              {!isCreator && (
+              {!isCreator && activity.status === "active" && (
                 <button
                   onClick={handleJoin}
                   disabled={joining || (isFull && !joined)}
@@ -196,8 +214,24 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
               )}
 
               {isCreator && (
-                <div className="w-full py-4 rounded-2xl bg-sage/10 text-sage text-center font-unbounded font-bold text-sm border-2 border-sage/30">
-                  ✓ Ты организатор
+                <div className="space-y-3">
+                  <div className="w-full py-4 rounded-2xl bg-sage/10 text-sage text-center font-unbounded font-bold text-sm border-2 border-sage/30">
+                    ✓ Ты организатор
+                  </div>
+                  {activity.status === "active" && (
+                    <button
+                      onClick={handleComplete}
+                      disabled={completing}
+                      className="w-full py-3 rounded-2xl bg-red-50 text-red-600 border-2 border-red-200 font-unbounded font-bold text-sm hover:bg-red-100 transition-colors disabled:opacity-50"
+                    >
+                      {completing ? "Завершаем…" : "Завершить событие"}
+                    </button>
+                  )}
+                  {activity.status === "completed" && (
+                    <div className="w-full py-3 rounded-2xl bg-gray-50 text-gray-500 text-center font-unbounded font-bold text-sm border-2 border-gray-200">
+                      Событие завершено
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -205,6 +239,15 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                 <p className="text-center text-xs text-sage mt-3 font-golos">
                   Организатор получил уведомление 🎉
                 </p>
+              )}
+
+              {isParticipant && activity.status === "completed" && (
+                <Link
+                  href={`/activities/${id}/review`}
+                  className="block w-full py-3 rounded-2xl bg-amber-50 text-amber-700 border-2 border-amber-200 font-unbounded font-bold text-sm text-center hover:bg-amber-100 transition-colors mt-3"
+                >
+                  ⭐ Оставить отзывы
+                </Link>
               )}
             </div>
 
