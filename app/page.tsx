@@ -39,7 +39,7 @@ export default async function LandingPage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-mint/15 border border-mint/30 text-mint text-xs font-semibold px-4 py-2 rounded-full mb-10">
             <span className="w-1.5 h-1.5 rounded-full bg-mint animate-pulse" />
-            Реальная жизнь. Без сложностей.
+            Прокачай персонажа — офлайн
           </div>
 
           {/* Main headline */}
@@ -50,7 +50,7 @@ export default async function LandingPage() {
           </h1>
 
           <p className="text-cream/60 text-xl leading-relaxed max-w-2xl mx-auto mb-6">
-            Как в CS или FIFA — только в реальной жизни.
+            Новые люди. Новые квесты. Новый ты.
           </p>
 
           <p className="text-cream/40 text-base max-w-xl mx-auto mb-14">
