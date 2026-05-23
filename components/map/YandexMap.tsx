@@ -27,19 +27,17 @@ const YandexMap = forwardRef<YandexMapHandle, Props>(({ activities = [], onMapRe
   const mapInstance = useRef<any>(null);
 
   useImperativeHandle(ref, () => ({
-    async searchAddress(address: string) {
-  console.log("searchAddress called", address, !!window.ymaps, !!mapInstance.current);
-  if (!window.ymaps || !mapInstance.current) return null;
+   async searchAddress(address: string) {
   try {
-    console.log("calling geocode...");
-    const res = await window.ymaps.geocode(address, { results: 1 });
-    console.log("geocode result:", res);
-    const obj = res.geoObjects.get(0);
-    console.log("first object:", obj);
-    if (!obj) return null;
-    const coords = obj.geometry.getCoordinates();
-    console.log("coords:", coords);
-    return { lat: coords[0], lng: coords[1] };
+    const key = process.env.NEXT_PUBLIC_YANDEX_GEOCODER_KEY;
+    const url = `https://geocode-maps.yandex.ru/1.x/?apikey=${key}&geocode=${encodeURIComponent(address)}&format=json&results=1`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const members = data?.response?.GeoObjectCollection?.featureMember;
+    if (!members || members.length === 0) return null;
+    const pos = members[0].GeoObject.Point.pos as string;
+    const [lng, lat] = pos.split(" ").map(Number);
+    return { lat, lng };
   } catch (e) {
     console.error("geocode error:", e);
     return null;
