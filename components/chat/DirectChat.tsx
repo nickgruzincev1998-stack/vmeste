@@ -30,7 +30,7 @@ export default function DirectChat({ partnerId, currentUserId, partnerName }: Pr
   const [messages, setMessages] = useState<DM[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch(`/api/dm/${partnerId}`)
@@ -49,7 +49,9 @@ export default function DirectChat({ partnerId, currentUserId, partnerName }: Pr
   }, [partnerId, currentUserId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   async function handleSend() {
@@ -78,7 +80,7 @@ export default function DirectChat({ partnerId, currentUserId, partnerName }: Pr
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 ? (
           <div className="text-center py-12 text-bark text-sm">
             Напиши первое сообщение {partnerName}
@@ -108,7 +110,6 @@ export default function DirectChat({ partnerId, currentUserId, partnerName }: Pr
             );
           })
         )}
-        <div ref={bottomRef} />
       </div>
 
       <div className="border-t border-forest/8 p-3 flex gap-2">
