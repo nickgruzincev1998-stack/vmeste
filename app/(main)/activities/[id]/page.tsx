@@ -1,6 +1,7 @@
 "use client";
 
 import ChatRoom from "@/components/chat/ChatRoom";
+import FriendButton from "@/components/shared/FriendButton";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
@@ -31,6 +32,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const [joining, setJoining]   = useState(false);
   const [completing, setCompleting] = useState(false);
   const [dbUserId, setDbUserId] = useState<string | undefined>(undefined);
+  const [friendStatuses, setFriendStatuses] = useState<Record<string, { status: string | null; friendshipId: string | null }>>({});
 
   useEffect(() => {
     fetch(`/api/activities/${id}`)
@@ -47,10 +49,22 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
     if (!isSignedIn) return;
     fetch("/api/users/me")
       .then((r) => r.json())
-      .then((data) => {
-        if (data.id) setDbUserId(data.id);
-      });
+      .then((data) => { if (data.id) setDbUserId(data.id); });
   }, [isSignedIn]);
+
+  // Load friendship statuses for all participants once both activity and current user are known
+  useEffect(() => {
+    if (!activity || !dbUserId) return;
+    const otherIds = [
+      ...activity.participants.map((p: any) => p.user?.id).filter(Boolean),
+      activity.creatorId,
+    ].filter((id: string) => id !== dbUserId);
+    const unique = [...new Set<string>(otherIds)];
+    if (unique.length === 0) return;
+    fetch(`/api/friends/statuses?ids=${unique.join(",")}`)
+      .then((r) => r.json())
+      .then((data) => { if (!data.error) setFriendStatuses(data); });
+  }, [activity, dbUserId]);
 
   // Проверяем создатель ли и записан ли
   useEffect(() => {
@@ -276,12 +290,65 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                       <span className="text-bark">{activity.creator.rating?.toFixed(1) ?? "5.0"}</span>
                     </div>
                   </div>
-                  <Link
-                    href={`/profile/${activity.creator.username}`}
-                    className="text-xs text-sage hover:text-forest font-semibold flex items-center gap-0.5 transition-colors"
-                  >
-                    Профиль <ChevronRight size={12} />
-                  </Link>
+                  <div className="flex flex-col items-end gap-1.5">
+                    <Link
+                      href={`/profile/${activity.creator.username}`}
+                      className="text-xs text-sage hover:text-forest font-semibold flex items-center gap-0.5 transition-colors"
+                    >
+                      Профиль <ChevronRight size={12} />
+                    </Link>
+                    {dbUserId && activity.creator.id !== dbUserId && friendStatuses[activity.creator.id] !== undefined && (
+                      <FriendButton
+                        userId={activity.creator.id}
+                        initialStatus={friendStatuses[activity.creator.id]?.status ?? null}
+                        initialFriendshipId={friendStatuses[activity.creator.id]?.friendshipId ?? null}
+                        size="sm"
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Participants */}
+            {activity.participants?.length > 0 && (
+              <div className="bg-white rounded-3xl border border-forest/10 p-5">
+                <div className="text-xs font-semibold text-bark uppercase tracking-wide mb-4">
+                  Участники · {activity.participants.length}
+                </div>
+                <div className="space-y-3">
+                  {activity.participants.map((p: any) => {
+                    const u = p.user;
+                    if (!u) return null;
+                    const isSelf = u.id === dbUserId;
+                    const isOrg = u.id === activity.creatorId;
+                    return (
+                      <div key={u.id} className="flex items-center gap-3">
+                        <Link href={`/profile/${u.username}`} className="flex-shrink-0">
+                          <div className="w-9 h-9 rounded-full bg-sage flex items-center justify-center text-cream font-bold text-sm overflow-hidden">
+                            {u.avatar
+                              ? <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" />
+                              : u.name[0]}
+                          </div>
+                        </Link>
+                        <div className="flex-1 min-w-0">
+                          <Link href={`/profile/${u.username}`}>
+                            <span className="font-golos font-semibold text-forest text-sm hover:underline">{u.name}</span>
+                          </Link>
+                          {isOrg && <span className="ml-1.5 text-xs text-sage">организатор</span>}
+                          {isSelf && <span className="ml-1.5 text-xs text-bark">ты</span>}
+                        </div>
+                        {!isSelf && dbUserId && friendStatuses[u.id] !== undefined && (
+                          <FriendButton
+                            userId={u.id}
+                            initialStatus={friendStatuses[u.id]?.status ?? null}
+                            initialFriendshipId={friendStatuses[u.id]?.friendshipId ?? null}
+                            size="sm"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
