@@ -165,7 +165,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
     <div className="min-h-screen bg-cream">
 
       {/* ── Hero ── */}
-      <div className="bg-forest text-cream pb-24 pt-8 px-4 relative overflow-hidden">
+      <div className="bg-forest text-cream pb-8 pt-8 px-4 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 right-0 w-72 h-72 rounded-full bg-sage/10 blur-3xl" />
           <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-mint/5 blur-2xl" />
@@ -319,27 +319,26 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
               + Расскажи о себе и своём опыте в спорте…
             </button>
           ) : null}
+
+          {/* Stats strip inside hero */}
+          <div className="mt-8 grid grid-cols-4 gap-px bg-white/10 rounded-2xl overflow-hidden">
+            {[
+              { num: actCount.toString(),                      label: "событий" },
+              { num: friendCount.toString(),                   label: "друзей" },
+              { num: `${profile.xp ?? 0}`,                    label: "XP" },
+              { num: profile.rating?.toFixed(1) ?? "5.0",     label: "рейтинг" },
+            ].map(({ num, label }) => (
+              <div key={label} className="bg-white/5 py-4 text-center">
+                <div className="font-unbounded font-black text-cream text-2xl leading-none">{num}</div>
+                <div className="text-cream/50 text-xs mt-1.5 font-golos">{label}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* ── Body ── */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-14 pb-16 space-y-6">
-
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-3">
-          {[
-            { icon: Calendar, num: actCount.toString(), label: "событий" },
-            { icon: Users,    num: friendCount.toString(), label: "друзей" },
-            { icon: Trophy,   num: `${profile.xp ?? 0}`, label: "XP" },
-            { icon: Star,     num: profile.rating?.toFixed(1) ?? "5.0", label: "рейтинг" },
-          ].map(({ icon: Icon, num, label }) => (
-            <div key={label} className="bg-white rounded-2xl p-4 text-center shadow-sm border border-forest/8">
-              <Icon size={18} className="text-sage mx-auto mb-2" />
-              <div className="font-unbounded font-black text-forest text-xl">{num}</div>
-              <div className="text-bark text-xs mt-0.5 font-golos">{label}</div>
-            </div>
-          ))}
-        </div>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-6 pb-16 space-y-6">
 
         {/* XP bar (own only) */}
         {isOwn && (
