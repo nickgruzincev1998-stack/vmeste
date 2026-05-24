@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, X, MapPin, Compass, Home, Plus, User, Users } from "lucide-react";
+import { Menu, X, MapPin, Compass, Home, Plus, User, Users, MessageCircle } from "lucide-react";
 import { UserButton, useAuth } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import NotificationBell from "@/components/layout/NotificationBell";
 
 const navLinks = [
-  { href: "/feed",    label: "Лента",  icon: Home },
-  { href: "/explore", label: "Найти",  icon: Compass },
-  { href: "/map",     label: "Карта",  icon: MapPin },
-  { href: "/about",   label: "О нас",  icon: Users },  // ← добавь
+  { href: "/feed",     label: "Лента",      icon: Home },
+  { href: "/explore",  label: "Найти",      icon: Compass },
+  { href: "/map",      label: "Карта",      icon: MapPin },
+  { href: "/messages", label: "Сообщения",  icon: MessageCircle },
+  { href: "/about",    label: "О нас",      icon: Users },
 ];
 
 export default function Navbar() {

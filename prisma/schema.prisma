@@ -25,12 +25,17 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  activities     Activity[]
-  participations Participation[]
-  reviewsGiven   Review[]        @relation("Reviewer")
-  reviewsReceived Review[]       @relation("Reviewee")
-  notifications  Notification[]
+  activities      Activity[]
+  participations  Participation[]
+  reviewsGiven    Review[]        @relation("Reviewer")
+  reviewsReceived Review[]        @relation("Reviewee")
+  notifications   Notification[]
   messages        Message[]
+
+  friendsInitiated Friendship[]    @relation("FriendshipRequester")
+  friendsReceived  Friendship[]    @relation("FriendshipAddressee")
+  dmsSent          DirectMessage[] @relation("DMSender")
+  dmsReceived      DirectMessage[] @relation("DMReceiver")
 }
 
 model Activity {
@@ -110,4 +115,30 @@ model Message {
 
   sender     User     @relation(fields: [senderId], references: [id])
   activity   Activity @relation(fields: [activityId], references: [id])
+}
+
+model Friendship {
+  id          String   @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      String   @default("pending") // pending | accepted | rejected
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  requester   User @relation("FriendshipRequester", fields: [requesterId], references: [id])
+  addressee   User @relation("FriendshipAddressee", fields: [addresseeId], references: [id])
+
+  @@unique([requesterId, addresseeId])
+}
+
+model DirectMessage {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  content    String
+  read       Boolean  @default(false)
+  sentAt     DateTime @default(now())
+
+  sender     User @relation("DMSender",   fields: [senderId],   references: [id])
+  receiver   User @relation("DMReceiver", fields: [receiverId], references: [id])
 }
