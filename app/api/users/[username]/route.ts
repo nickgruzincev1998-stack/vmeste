@@ -28,7 +28,23 @@ export async function GET(
           select: {
             activities: true,
             friendsInitiated: { where: { status: "accepted" } },
-            friendsReceived: { where: { status: "accepted" } },
+            friendsReceived:  { where: { status: "accepted" } },
+            reviewsReceived:  true,
+          },
+        },
+        activities: {
+          orderBy: { createdAt: "desc" },
+          take: 6,
+          include: {
+            category: true,
+            _count: { select: { participants: { where: { status: "active" } } } },
+          },
+        },
+        reviewsReceived: {
+          orderBy: { createdAt: "desc" },
+          take: 10,
+          include: {
+            reviewer: { select: { id: true, username: true, name: true, avatar: true } },
           },
         },
       },
@@ -62,8 +78,16 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({ ...user, friendshipStatus, friendshipId });
-  } catch (error) {
+    const friendCount =
+      (user._count.friendsInitiated ?? 0) + (user._count.friendsReceived ?? 0);
+
+    return NextResponse.json({
+      ...user,
+      friendCount,
+      friendshipStatus,
+      friendshipId,
+    });
+  } catch {
     return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 });
   }
 }
