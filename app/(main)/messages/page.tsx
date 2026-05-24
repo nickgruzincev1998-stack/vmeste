@@ -82,12 +82,6 @@ export default function MessagesPage() {
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Lock page scroll — footer makes the page taller than viewport
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
-  }, []);
-
   useEffect(() => {
     fetch("/api/users/me").then(r => r.json()).then(d => { if (!d.error) setDbUser(d); });
     fetchFriends();
@@ -156,11 +150,11 @@ export default function MessagesPage() {
   const totalUnread = conversations.reduce((s, c) => s + c.unreadCount, 0);
 
   return (
-    <div className="bg-cream">
-      <div className="max-w-5xl mx-auto px-4 pt-8 pb-0">
+    <div className="h-[calc(100vh-64px)] bg-cream overflow-hidden flex flex-col">
+      <div className="max-w-5xl w-full mx-auto px-4 pt-6 flex flex-col flex-1 min-h-0">
 
         {/* Page header */}
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-4 mb-4 flex-shrink-0">
           <h1 className="font-unbounded font-black text-forest text-2xl flex-1">Сообщения</h1>
           {requests.length > 0 && (
             <button
@@ -220,10 +214,10 @@ export default function MessagesPage() {
           </div>
         )}
 
-        <div className="flex gap-4 h-[calc(100vh-200px)] min-h-[520px]">
+        <div className="flex gap-4 flex-1 min-h-0 pb-4">
 
           {/* ── Left panel ── */}
-          <div className="w-80 flex-shrink-0 flex flex-col gap-3">
+          <div className="w-80 flex-shrink-0 flex flex-col gap-3 min-h-0">
 
             {/* Search */}
             <div className="bg-white rounded-2xl border border-forest/8 p-3">
@@ -387,7 +381,7 @@ export default function MessagesPage() {
           </div>
 
           {/* ── Chat area ── */}
-          <div className="flex-1 bg-white rounded-2xl border border-forest/8 overflow-hidden flex flex-col">
+          <div className="flex-1 bg-white rounded-2xl border border-forest/8 overflow-hidden flex flex-col min-h-0">
             {activePartner && dbUser ? (
               <>
                 {/* Chat header */}

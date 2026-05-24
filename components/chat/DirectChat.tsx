@@ -98,8 +98,8 @@ export default function DirectChat({ partnerId, currentUserId, partnerName }: Pr
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+    <div className="flex-1 flex flex-col min-h-0">
+      <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
         {messages.length === 0 ? (
           <div className="text-center py-12 text-bark text-sm">
             Напиши первое сообщение {partnerName}
