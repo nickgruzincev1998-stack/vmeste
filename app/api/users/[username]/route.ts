@@ -9,7 +9,6 @@ export async function GET(
   try {
     const { username } = await params;
 
-    // 1. Базовые данные пользователя
     const user = await db.user.findUnique({
       where: { username },
       select: {
@@ -31,39 +30,60 @@ export async function GET(
       return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 });
     }
 
-    // 2. Все остальные данные параллельно
-    const [friendCount, activityCount, reviewCount, activities, reviews] =
-      await Promise.all([
-        db.friendship.count({
-          where: {
-            status: "accepted",
-            OR: [{ requesterId: user.id }, { addresseeId: user.id }],
-          },
-        }),
-        db.activity.count({ where: { creatorId: user.id } }),
-        db.review.count({ where: { revieweeId: user.id } }),
-        db.activity.findMany({
-          where: { creatorId: user.id },
-          orderBy: { createdAt: "desc" },
-          take: 6,
-          include: {
-            category: true,
-            _count: { select: { participants: { where: { status: "active" } } } },
-          },
-        }),
-        db.review.findMany({
-          where: { revieweeId: user.id },
-          orderBy: { createdAt: "desc" },
-          take: 10,
-          include: {
-            reviewer: {
-              select: { id: true, username: true, name: true, avatar: true },
+    const [
+      friendCount,
+      activityCount,
+      playedCount,
+      reviewCount,
+      activities,
+      playedActivities,
+      reviews,
+    ] = await Promise.all([
+      db.friendship.count({
+        where: {
+          status: "accepted",
+          OR: [{ requesterId: user.id }, { addresseeId: user.id }],
+        },
+      }),
+      db.activity.count({ where: { creatorId: user.id } }),
+      db.participation.count({
+        where: { userId: user.id, status: "active" },
+      }),
+      db.review.count({ where: { revieweeId: user.id } }),
+      db.activity.findMany({
+        where: { creatorId: user.id },
+        orderBy: { date: "desc" },
+        take: 9,
+        include: {
+          category: true,
+          _count: { select: { participants: { where: { status: "active" } } } },
+        },
+      }),
+      db.participation.findMany({
+        where: { userId: user.id, status: "active" },
+        orderBy: { joinedAt: "desc" },
+        take: 9,
+        include: {
+          activity: {
+            include: {
+              category: true,
+              _count: { select: { participants: { where: { status: "active" } } } },
             },
           },
-        }),
-      ]);
+        },
+      }),
+      db.review.findMany({
+        where: { revieweeId: user.id },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        include: {
+          reviewer: {
+            select: { id: true, username: true, name: true, avatar: true },
+          },
+        },
+      }),
+    ]);
 
-    // 3. Статус дружбы с текущим пользователем
     let friendshipStatus: string | null = null;
     let friendshipId: string | null = null;
 
@@ -97,8 +117,9 @@ export async function GET(
     return NextResponse.json({
       ...user,
       friendCount,
-      _count: { activities: activityCount, reviewsReceived: reviewCount },
+      _count: { activities: activityCount, played: playedCount, reviewsReceived: reviewCount },
       activities,
+      playedActivities: playedActivities.map((p) => p.activity),
       reviewsReceived: reviews,
       friendshipStatus,
       friendshipId,
