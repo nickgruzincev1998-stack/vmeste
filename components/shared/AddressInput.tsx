@@ -20,6 +20,7 @@ export default function AddressInput({ value, onChange, placeholder }: Props) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [geoError, setGeoError] = useState(false);
   const [open, setOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -91,7 +92,7 @@ export default function AddressInput({ value, onChange, placeholder }: Props) {
         setLocating(false);
       },
       () => {
-        alert("Не удалось определить геолокацию. Разрешите доступ в браузере.");
+        setGeoError(true);
         setLocating(false);
       },
       { enableHighAccuracy: true, timeout: 8000 }
@@ -122,6 +123,16 @@ export default function AddressInput({ value, onChange, placeholder }: Props) {
             : <LocateFixed size={15} />}
         </button>
       </div>
+
+      {geoError && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 z-50 flex items-start gap-2">
+          <span className="text-base flex-shrink-0">🔒</span>
+          <p className="text-amber-800 text-xs font-golos leading-snug">
+            Доступ к геолокации запрещён. Нажми на 🔒 в адресной строке → Местоположение → Разрешить.
+          </p>
+          <button onClick={() => setGeoError(false)} className="text-amber-400 hover:text-amber-600 ml-auto flex-shrink-0 text-sm leading-none">✕</button>
+        </div>
+      )}
 
       {open && suggestions.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-forest/10 rounded-2xl shadow-xl z-50 overflow-hidden">

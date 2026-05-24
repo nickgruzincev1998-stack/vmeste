@@ -42,6 +42,7 @@ export default function MapPage() {
   const [showCircle, setShowCircle] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
   const mapRef = useRef<MapHandle>(null);
   const suggestTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -130,6 +131,7 @@ export default function MapPage() {
   function handleMyLocation() {
     if (!navigator.geolocation || !mapReady) return;
     setLocating(true);
+    setGeoError(null);
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         const { latitude: lat, longitude: lng } = coords;
@@ -139,10 +141,15 @@ export default function MapPage() {
         mapRef.current?.setCenter(lat, lng, 13);
         mapRef.current?.setRadiusCircle(lat, lng, radius);
         setLocating(false);
+        setGeoError(null);
       },
-      () => {
-        alert("Не удалось определить геолокацию. Разрешите доступ в настройках браузера.");
+      (err) => {
         setLocating(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setGeoError("permission");
+        } else {
+          setGeoError("error");
+        }
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );
@@ -235,6 +242,27 @@ export default function MapPage() {
               Я здесь
             </button>
           </div>
+
+          {geoError && (
+            <div className="mt-3 flex items-start gap-2 bg-white/10 rounded-xl px-4 py-3 max-w-2xl">
+              <span className="text-xl flex-shrink-0">{geoError === "permission" ? "🔒" : "⚠️"}</span>
+              <div>
+                {geoError === "permission" ? (
+                  <>
+                    <p className="text-cream text-sm font-golos font-semibold">Доступ к геолокации запрещён</p>
+                    <p className="text-cream/70 text-xs font-golos mt-0.5">
+                      Чтобы разрешить: нажми на 🔒 или ℹ️ слева от адресной строки → «Разрешения сайта» → «Местоположение» → «Разрешить»
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-cream text-sm font-golos">Не удалось определить местоположение. Попробуй ещё раз.</p>
+                )}
+              </div>
+              <button onClick={() => setGeoError(null)} className="text-cream/50 hover:text-cream ml-auto flex-shrink-0">
+                <X size={14} />
+              </button>
+            </div>
+          )}
 
           {center && (
             <div className="mt-3 flex items-center gap-3 flex-wrap">
