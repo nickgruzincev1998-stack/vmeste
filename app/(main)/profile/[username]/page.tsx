@@ -14,22 +14,22 @@ import FriendButton from "@/components/shared/FriendButton";
 
 // ── Level system ──────────────────────────────────────────────────────────────
 
+// Должно совпадать с lib/xp.ts
 const LEVELS = [
-  { level: 1, name: "Салага",        icon: Shield,  xpNeeded: 1000,  color: "from-slate-400 to-slate-500" },
-  { level: 2, name: "Активист",      icon: Swords,  xpNeeded: 2500,  color: "from-emerald-400 to-teal-500" },
-  { level: 3, name: "Гроза района",  icon: Flame,   xpNeeded: 5000,  color: "from-orange-400 to-red-500" },
-  { level: 4, name: "Легенда",       icon: Crown,   xpNeeded: 10000, color: "from-yellow-400 to-amber-500" },
-  { level: 5, name: "Чемпион",       icon: Trophy,  xpNeeded: Infinity, color: "from-violet-400 to-purple-600" },
+  { level: 1, name: "Салага",       emoji: "🐣", icon: Shield, min: 0,    max: 299,      color: "from-slate-400 to-slate-500" },
+  { level: 2, name: "Активист",     emoji: "🏃", icon: Swords, min: 300,  max: 899,      color: "from-emerald-400 to-teal-500" },
+  { level: 3, name: "Гроза района", emoji: "⚡", icon: Flame,  min: 900,  max: 2399,     color: "from-orange-400 to-red-500" },
+  { level: 4, name: "Легенда",      emoji: "🔥", icon: Crown,  min: 2400, max: 5399,     color: "from-yellow-400 to-amber-500" },
+  { level: 5, name: "Чемпион",      emoji: "👑", icon: Trophy, min: 5400, max: Infinity, color: "from-violet-400 to-purple-600" },
 ];
 
-function getLevelInfo(level: number, xp: number) {
-  const cur  = LEVELS[Math.min(level - 1, LEVELS.length - 1)];
-  const next = LEVELS[Math.min(level, LEVELS.length - 1)];
-  const prevXp = level <= 1 ? 0 : LEVELS[level - 2].xpNeeded;
-  const range  = cur.xpNeeded === Infinity ? 1 : cur.xpNeeded - prevXp;
-  const progress = cur.xpNeeded === Infinity ? 100 : Math.min(((xp - prevXp) / range) * 100, 100);
-  const xpLeft   = cur.xpNeeded === Infinity ? 0 : Math.max(cur.xpNeeded - xp, 0);
-  return { cur, next, progress, xpLeft };
+function getLevelInfo(xp: number) {
+  const cur  = LEVELS.findLast((l) => xp >= l.min) ?? LEVELS[0];
+  const next = LEVELS[Math.min(cur.level, LEVELS.length - 1)];
+  const isMax = cur.max === Infinity;
+  const progress = isMax ? 100 : Math.min(((xp - cur.min) / (cur.max - cur.min + 1)) * 100, 100);
+  const xpLeft   = isMax ? 0 : cur.max - xp + 1;
+  return { cur, next, progress, xpLeft, isMax };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -198,9 +198,9 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
     );
   }
 
-  const lvl = profile.level ?? 1;
   const xp  = profile.xp ?? 0;
-  const { cur: curLevel, progress: xpProgress, xpLeft } = getLevelInfo(lvl, xp);
+  const { cur: curLevel, progress: xpProgress, xpLeft, isMax } = getLevelInfo(xp);
+  const lvl = curLevel.level;
   const LevelIcon = curLevel.icon;
   const achievements = computeAchievements(profile);
   const actCount    = profile._count?.activities ?? 0;
@@ -398,7 +398,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                 <span className="text-cream/30 text-xs font-golos">ур. {lvl}</span>
               </div>
               <span className="text-cream/45 text-xs font-golos">
-                {curLevel.xpNeeded === Infinity
+                {isMax
                   ? `${xp} XP · Макс. уровень`
                   : `ещё ${xpLeft} XP до «${LEVELS[Math.min(lvl, LEVELS.length - 1)].name}»`}
               </span>

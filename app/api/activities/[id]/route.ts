@@ -2,8 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createNotification } from "@/lib/notifications";
+import { grantXP, XP_REWARDS } from "@/lib/xp";
 
-// GET /api/activities/[id]
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -56,7 +56,7 @@ export async function GET(
   }
 }
 
-// POST /api/activities/[id] — вступить / покинуть
+// POST — вступить / покинуть
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -92,7 +92,6 @@ export async function POST(
       where: { userId_activityId: { userId: user.id, activityId: id } },
     });
 
-    // Если уже активный участник — выходим
     if (existing && existing.status === "active") {
       await db.participation.update({
         where: { userId_activityId: { userId: user.id, activityId: id } },
@@ -101,12 +100,10 @@ export async function POST(
       return NextResponse.json({ joined: false, message: "Вы покинули событие" });
     }
 
-    // Проверяем лимит
     if (activity._count.participants >= activity.maxParticipants) {
       return NextResponse.json({ error: "Событие заполнено" }, { status: 400 });
     }
 
-    // Вступаем или возвращаемся
     await db.participation.upsert({
       where: { userId_activityId: { userId: user.id, activityId: id } },
       update: { status: "active" },
@@ -120,6 +117,18 @@ export async function POST(
       `${user.name} записался на «${activity.title}»`
     );
 
+    // +10 XP за запись на событие
+    // +20 XP если впервые участвует в этой категории
+    const prevInCategory = await db.participation.count({
+      where: {
+        userId: user.id,
+        status: "active",
+        activity: { categoryId: activity.categoryId, id: { not: id } },
+      },
+    });
+
+    await grantXP(user.id, XP_REWARDS.JOIN_ACTIVITY + (prevInCategory === 0 ? XP_REWARDS.NEW_CATEGORY : 0));
+
     return NextResponse.json({ joined: true, message: "Вы вступили в событие" });
   } catch (error) {
     console.error("[POST /api/activities/id]", error);
@@ -127,7 +136,7 @@ export async function POST(
   }
 }
 
-// DELETE /api/activities/[id] — удалить (только создатель)
+// DELETE — удалить (только создатель)
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -144,9 +153,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 });
     }
 
-    const activity = await db.activity.findUnique({
-      where: { id },
-    });
+    const activity = await db.activity.findUnique({ where: { id } });
 
     if (!activity) {
       return NextResponse.json({ error: "Событие не найдено" }, { status: 404 });

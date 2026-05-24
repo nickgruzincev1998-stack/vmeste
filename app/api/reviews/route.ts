@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { grantXP, XP_REWARDS } from "@/lib/xp";
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,28 +29,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Нельзя оценить себя" }, { status: 400 });
     }
 
-    // Проверяем что оба были участниками
     const activity = await db.activity.findUnique({
       where: { id: activityId },
-      include: {
-        participants: { where: { status: "active" } },
-      },
+      include: { participants: { where: { status: "active" } } },
     });
 
     if (!activity || activity.status !== "completed") {
       return NextResponse.json({ error: "Событие не завершено" }, { status: 400 });
     }
 
-    // Проверяем что отзыв ещё не оставлен
     const existing = await db.review.findFirst({
-      where: { reviewerId: user.id, revieweeId, },
+      where: { reviewerId: user.id, revieweeId },
     });
 
     if (existing) {
       return NextResponse.json({ error: "Отзыв уже оставлен" }, { status: 400 });
     }
 
-    // Создаём отзыв
     const review = await db.review.create({
       data: {
         reviewerId: user.id,
@@ -59,18 +55,21 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Обновляем рейтинг пользователя
+    // Пересчитываем средний рейтинг
     const allReviews = await db.review.findMany({
       where: { revieweeId },
       select: { rating: true },
     });
-
     const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
-
     await db.user.update({
       where: { id: revieweeId },
       data: { rating: Math.round(avgRating * 10) / 10 },
     });
+
+    // +25 XP за 5★ отзыв
+    if (rating === 5) {
+      await grantXP(revieweeId, XP_REWARDS.FIVE_STAR_REVIEW);
+    }
 
     return NextResponse.json({ success: true, review });
   } catch (error) {

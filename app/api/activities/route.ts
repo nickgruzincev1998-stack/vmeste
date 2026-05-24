@@ -1,8 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { grantXP, XP_REWARDS } from "@/lib/xp";
 
-// GET /api/activities — получить список событий
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -35,7 +35,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/activities — создать событие
 export async function POST(req: NextRequest) {
   try {
     const { userId: clerkId } = await auth();
@@ -69,6 +68,14 @@ export async function POST(req: NextRequest) {
         maxParticipants: maxParticipants ?? 10,
       },
     });
+
+    // +30 XP за создание события
+    // +20 XP если первое событие в этой категории
+    const prevInCategory = await db.activity.count({
+      where: { creatorId: user.id, categoryId, id: { not: activity.id } },
+    });
+
+    await grantXP(user.id, XP_REWARDS.CREATE_ACTIVITY + (prevInCategory === 0 ? XP_REWARDS.NEW_CATEGORY : 0));
 
     return NextResponse.json(activity, { status: 201 });
   } catch (error) {
