@@ -30,6 +30,8 @@ body {
   .font-unbounded { font-family: var(--font-unbounded); }
   .font-golos     { font-family: var(--font-golos); }
   .text-balance { text-wrap: balance; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
   .animate-delay-100 { animation-delay: 100ms; }
   .animate-delay-200 { animation-delay: 200ms; }
   .animate-delay-300 { animation-delay: 300ms; }
