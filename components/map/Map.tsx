@@ -25,12 +25,14 @@ export interface MapHandle {
   setSearchMarker: (lat: number, lng: number) => void;
   setRadiusCircle: (lat: number, lng: number, radiusKm: number) => void;
   removeRadiusCircle: () => void;
+  setUserLocation: (lat: number, lng: number) => void;
 }
 
 const Map = forwardRef<MapHandle, Props>(({ activities = [], onMapReady }, ref) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maptilersdk.Map | null>(null);
   const searchMarker = useRef<maptilersdk.Marker | null>(null);
+  const userMarker = useRef<maptilersdk.Marker | null>(null);
   const radiusCircle = useRef<any>(null);
 
   useImperativeHandle(ref, () => ({
@@ -130,6 +132,46 @@ const Map = forwardRef<MapHandle, Props>(({ activities = [], onMapReady }, ref) 
       });
 
       radiusCircle.current = { sourceId, layerId, borderLayerId };
+    },
+
+    setUserLocation(lat: number, lng: number) {
+      if (!mapInstance.current) return;
+      if (userMarker.current) userMarker.current.remove();
+
+      // Пульсирующая синяя точка «Вы здесь»
+      const el = document.createElement("div");
+      el.style.cssText = `
+        width: 20px; height: 20px;
+        border-radius: 50%;
+        background: #3b82f6;
+        border: 3px solid white;
+        box-shadow: 0 0 0 0 rgba(59,130,246,0.5);
+        animation: pulse-blue 1.8s ease-out infinite;
+        cursor: default;
+        position: relative;
+      `;
+
+      // Inject keyframes once
+      if (!document.getElementById("pulse-blue-style")) {
+        const style = document.createElement("style");
+        style.id = "pulse-blue-style";
+        style.textContent = `
+          @keyframes pulse-blue {
+            0%   { box-shadow: 0 0 0 0 rgba(59,130,246,0.5); }
+            70%  { box-shadow: 0 0 0 14px rgba(59,130,246,0); }
+            100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      const popup = new maptilersdk.Popup({ offset: 15, closeButton: false })
+        .setHTML(`<div style="font-size:13px;font-weight:600;color:#1e40af;padding:2px 4px;">Вы здесь</div>`);
+
+      userMarker.current = new maptilersdk.Marker({ element: el })
+        .setLngLat([lng, lat])
+        .setPopup(popup)
+        .addTo(mapInstance.current);
     },
 
     removeRadiusCircle() {

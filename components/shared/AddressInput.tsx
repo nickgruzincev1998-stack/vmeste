@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MapPin } from "lucide-react";
+import { MapPin, LocateFixed, Loader2 } from "lucide-react";
 import * as maptilersdk from "@maptiler/sdk";
 
 interface Suggestion {
@@ -19,6 +19,7 @@ interface Props {
 export default function AddressInput({ value, onChange, placeholder }: Props) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [open, setOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -70,6 +71,33 @@ export default function AddressInput({ value, onChange, placeholder }: Props) {
     setOpen(false);
   }
 
+  function handleGeolocate() {
+    if (!navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        const { latitude: lat, longitude: lng } = coords;
+        try {
+          const result = await maptilersdk.geocoding.reverse([lng, lat], {
+            language: maptilersdk.Language.RUSSIAN,
+            limit: 1,
+          });
+          const feature = result.features[0];
+          const name = feature?.place_name_ru || feature?.place_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+          onChange(name, lat, lng);
+        } catch {
+          onChange(`${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng);
+        }
+        setLocating(false);
+      },
+      () => {
+        alert("Не удалось определить геолокацию. Разрешите доступ в браузере.");
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
+
   return (
     <div ref={ref} className="relative">
       <div className="relative">
@@ -80,13 +108,19 @@ export default function AddressInput({ value, onChange, placeholder }: Props) {
           onFocus={() => suggestions.length > 0 && setOpen(true)}
           placeholder={placeholder ?? "Начните вводить адрес…"}
           autoComplete="off"
-          className="w-full bg-white border-2 border-forest/10 rounded-2xl pl-11 pr-10 py-4 text-sm font-golos outline-none focus:border-sage transition-colors"
+          className="w-full bg-white border-2 border-forest/10 rounded-2xl pl-11 pr-12 py-4 text-sm font-golos outline-none focus:border-sage transition-colors"
         />
-        {loading && (
-          <div className="absolute right-4 top-1/2 -translate-y-1/2">
-            <div className="w-4 h-4 border-2 border-sage border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={handleGeolocate}
+          disabled={locating}
+          title="Определить моё местоположение"
+          className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-xl text-sage hover:text-forest hover:bg-sage/10 transition-colors disabled:opacity-40"
+        >
+          {locating || loading
+            ? <Loader2 size={15} className="animate-spin" />
+            : <LocateFixed size={15} />}
+        </button>
       </div>
 
       {open && suggestions.length > 0 && (

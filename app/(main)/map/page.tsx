@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import ActivityCard from "@/components/activity/ActivityCard";
-import { Search, MapPin, Loader2, X } from "lucide-react";
+import { Search, MapPin, Loader2, X, LocateFixed } from "lucide-react";
 import { MapHandle } from "@/components/map/Map";
 
 const Map = dynamic(() => import("@/components/map/Map"), {
@@ -41,6 +41,7 @@ export default function MapPage() {
   const [radius, setRadius] = useState(10);
   const [showCircle, setShowCircle] = useState(false);
   const [mapReady, setMapReady] = useState(false);
+  const [locating, setLocating] = useState(false);
   const mapRef = useRef<MapHandle>(null);
   const suggestTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -126,6 +127,27 @@ export default function MapPage() {
     }
   }
 
+  function handleMyLocation() {
+    if (!navigator.geolocation || !mapReady) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const { latitude: lat, longitude: lng } = coords;
+        setCenter({ lat, lng });
+        setShowCircle(true);
+        mapRef.current?.setUserLocation(lat, lng);
+        mapRef.current?.setCenter(lat, lng, 13);
+        mapRef.current?.setRadiusCircle(lat, lng, radius);
+        setLocating(false);
+      },
+      () => {
+        alert("Не удалось определить геолокацию. Разрешите доступ в настройках браузера.");
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") handleSearch();
     if (e.key === "Escape") {
@@ -199,6 +221,18 @@ export default function MapPage() {
             >
               {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
               Найти
+            </button>
+
+            <button
+              onClick={handleMyLocation}
+              disabled={locating || !mapReady}
+              title="Моё местоположение"
+              className="px-4 py-3 bg-white/15 text-cream rounded-2xl hover:bg-white/25 transition-colors disabled:opacity-50 flex items-center gap-2 font-golos text-sm font-semibold whitespace-nowrap"
+            >
+              {locating
+                ? <Loader2 size={16} className="animate-spin" />
+                : <LocateFixed size={16} />}
+              Я здесь
             </button>
           </div>
 
