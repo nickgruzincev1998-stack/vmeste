@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { createNotification } from "@/lib/notifications";
 
 export async function GET() {
   try {
@@ -61,14 +62,12 @@ export async function POST(req: Request) {
       data: { requesterId: me.id, addresseeId: toUserId },
     });
 
-    await db.notification.create({
-      data: {
-        userId: toUserId,
-        type: "friend_request",
-        title: "Новый запрос в друзья",
-        body: `${me.name} хочет добавить тебя в друзья`,
-      },
-    });
+    await createNotification(
+      toUserId,
+      "friend_request",
+      "Новый запрос в друзья",
+      `${me.name} хочет добавить тебя в друзья`
+    );
 
     return NextResponse.json(friendship);
   } catch {

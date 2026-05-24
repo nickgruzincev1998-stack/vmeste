@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { createNotification } from "@/lib/notifications";
 
 // GET /api/activities/[id]
 export async function GET(
@@ -112,37 +113,14 @@ export async function POST(
       create: { userId: user.id, activityId: id, status: "active" },
     });
 
-    // Создаём уведомление для организатора
-    await db.notification.create({
-      data: {
-        userId: activity.creatorId,
-        type: "new_participant",
-        title: "Новый участник!",
-        body: `${user.name} записался на ваше событие "${activity.title}"`,
-      },
-    });
+    await createNotification(
+      activity.creatorId,
+      "new_participant",
+      "Новый участник!",
+      `${user.name} записался на «${activity.title}»`
+    );
 
-   // Создаём уведомление для организатора
-    await db.notification.create({
-      data: {
-        userId: activity.creatorId,
-        type: "new_participant",
-        title: "Новый участник!",
-        body: `${user.name} записался на ваше событие "${activity.title}"`,
-      },
-    });
-
-    // Создаём уведомление для организатора
-    await db.notification.create({
-      data: {
-        userId: activity.creatorId,
-        type: "new_participant",
-        title: "Новый участник!",
-        body: `${user.name} записался на ваше событие "${activity.title}"`,
-      },
-    });
-
-    return NextResponse.json({ joined: true, message: "Вы вступили в событие" }); 
+    return NextResponse.json({ joined: true, message: "Вы вступили в событие" });
   } catch (error) {
     console.error("[POST /api/activities/id]", error);
     return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 });

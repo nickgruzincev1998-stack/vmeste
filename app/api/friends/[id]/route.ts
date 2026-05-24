@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { createNotification } from "@/lib/notifications";
 
 export async function PATCH(
   req: Request,
@@ -30,14 +31,12 @@ export async function PATCH(
     });
 
     if (action === "accept") {
-      await db.notification.create({
-        data: {
-          userId: friendship.requesterId,
-          type: "friend_accepted",
-          title: "Запрос принят",
-          body: `${me.name} принял(а) твой запрос в друзья`,
-        },
-      });
+      await createNotification(
+        friendship.requesterId,
+        "friend_accepted",
+        "Запрос принят",
+        `${me.name} принял(а) твой запрос в друзья`
+      );
     }
 
     return NextResponse.json(updated);

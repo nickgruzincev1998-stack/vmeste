@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { currentUser } from "@clerk/nextjs/server";
 import { pusherServer } from "@/lib/pusher-server";
+import { createNotification } from "@/lib/notifications";
 import { NextResponse } from "next/server";
 
 function dmChannel(a: string, b: string) {
@@ -98,6 +99,13 @@ export async function POST(
       read: message.read,
       sender: message.sender,
     });
+
+    await createNotification(
+      userId,
+      "new_dm",
+      `Новое сообщение от ${me.name}`,
+      message.content.length > 60 ? message.content.slice(0, 60) + "…" : message.content
+    );
 
     return NextResponse.json(message);
   } catch {

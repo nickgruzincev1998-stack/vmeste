@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Bell } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
+import { pusherClient } from "@/lib/pusher-client";
 
 interface Notification {
   id: string;
@@ -13,6 +14,13 @@ interface Notification {
   read: boolean;
   createdAt: string;
 }
+
+const typeIcon: Record<string, string> = {
+  new_participant: "🙋",
+  friend_request:  "👋",
+  friend_accepted: "🤝",
+  new_dm:          "💬",
+};
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -27,23 +35,49 @@ function timeAgo(iso: string) {
 export default function NotificationBell() {
   const { isSignedIn } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [dbUserId, setDbUserId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const unread = notifications.filter((n) => !n.read).length;
 
+  // Fetch DB user id for Pusher channel
+  useEffect(() => {
+    if (!isSignedIn) return;
+    fetch("/api/users/me")
+      .then((r) => r.json())
+      .then((data) => { if (data.id) setDbUserId(data.id); });
+  }, [isSignedIn]);
+
+  // Initial fetch + polling fallback every 60s
   useEffect(() => {
     if (!isSignedIn) return;
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+    const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
   }, [isSignedIn]);
 
+  // Pusher real-time subscription
+  useEffect(() => {
+    if (!dbUserId || !pusherClient) return;
+
+    const channel = pusherClient.subscribe(`notifications-${dbUserId}`);
+    channel.bind("new-notification", (data: Notification) => {
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === data.id)) return prev;
+        return [data, ...prev];
+      });
+    });
+
+    return () => {
+      pusherClient.unsubscribe(`notifications-${dbUserId}`);
+    };
+  }, [dbUserId]);
+
+  // Close on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -75,7 +109,7 @@ export default function NotificationBell() {
       >
         <Bell size={18} />
         {unread > 0 && (
-          <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-ember text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+          <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -90,7 +124,7 @@ export default function NotificationBell() {
             )}
           </div>
 
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="text-center py-8">
                 <div className="text-3xl mb-2">🔔</div>
@@ -106,14 +140,18 @@ export default function NotificationBell() {
                   )}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={cn(
-                      "w-2 h-2 rounded-full mt-1.5 flex-shrink-0",
-                      n.read ? "bg-transparent" : "bg-mint"
-                    )} />
+                    <span className="text-lg flex-shrink-0 mt-0.5">
+                      {typeIcon[n.type] ?? "🔔"}
+                    </span>
                     <div className="flex-1 min-w-0">
-                      <div className="font-golos font-semibold text-forest text-sm">{n.title}</div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="font-golos font-semibold text-forest text-sm leading-snug">{n.title}</div>
+                        {!n.read && (
+                          <span className="w-2 h-2 rounded-full bg-mint flex-shrink-0 mt-1" />
+                        )}
+                      </div>
                       <div className="text-bark text-xs mt-0.5 line-clamp-2">{n.body}</div>
-                      <div className="text-bark/60 text-xs mt-1">{timeAgo(n.createdAt)}</div>
+                      <div className="text-bark/50 text-xs mt-1">{timeAgo(n.createdAt)}</div>
                     </div>
                   </div>
                 </div>
