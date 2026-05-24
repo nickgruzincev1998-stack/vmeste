@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, use } from "react";
 import { useUser } from "@clerk/nextjs";
 import {
   Star, Users, Calendar, Trophy, MapPin, ArrowLeft,
@@ -69,7 +69,8 @@ function computeAchievements(u: any) {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
-export default function ProfilePage({ params }: { params: { username: string } }) {
+export default function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = use(params);
   const { user: clerkUser } = useUser();
   const [myUsername, setMyUsername] = useState<string | null>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -83,7 +84,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
   const [form, setForm] = useState({ name: "", city: "", bio: "", age: "" });
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const isOwn = !!myUsername && myUsername === params.username;
+  const isOwn = !!myUsername && myUsername === username;
 
   // Load my username (to know if this is own profile)
   useEffect(() => {
@@ -97,7 +98,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
   useEffect(() => {
     setLoading(true);
     setNotFound(false);
-    fetch(`/api/users/${params.username}`)
+    fetch(`/api/users/${username}`)
       .then(r => r.json())
       .then(d => {
         if (d.error) { setNotFound(true); return; }
@@ -105,7 +106,7 @@ export default function ProfilePage({ params }: { params: { username: string } }
         setForm({ name: d.name ?? "", city: d.city ?? "", bio: d.bio ?? "", age: d.age?.toString() ?? "" });
       })
       .finally(() => setLoading(false));
-  }, [params.username]);
+  }, [username]);
 
   async function handleSave() {
     setSaving(true);
