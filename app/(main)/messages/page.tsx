@@ -82,11 +82,17 @@ export default function MessagesPage() {
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // One request instead of four — loads friends + chats + requests in parallel on the server
   useEffect(() => {
-    fetch("/api/users/me").then(r => r.json()).then(d => { if (!d.error) setDbUser(d); });
-    fetchFriends();
-    fetchConversations();
-    fetchRequests();
+    fetch("/api/messages/init")
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) return;
+        setDbUser(d.me);
+        setFriends(d.friends ?? []);
+        setConversations(d.conversations ?? []);
+        setRequests(d.requests ?? []);
+      });
   }, []);
 
   function fetchFriends() {

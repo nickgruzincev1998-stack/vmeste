@@ -1,13 +1,13 @@
 import { db } from "@/lib/db";
-import { currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const clerkUser = await currentUser();
-    if (!clerkUser) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
+    const { userId: clerkId } = await auth();
+    if (!clerkId) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-    const me = await db.user.findUnique({ where: { clerkId: clerkUser.id } });
+    const me = await db.user.findUnique({ where: { clerkId }, select: { id: true } });
     if (!me) return NextResponse.json({ error: "Не найден" }, { status: 404 });
 
     const requests = await db.friendship.findMany({

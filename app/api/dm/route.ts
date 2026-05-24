@@ -1,13 +1,13 @@
 import { db } from "@/lib/db";
-import { currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const clerkUser = await currentUser();
-    if (!clerkUser) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
+    const { userId: clerkId } = await auth();
+    if (!clerkId) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-    const me = await db.user.findUnique({ where: { clerkId: clerkUser.id } });
+    const me = await db.user.findUnique({ where: { clerkId }, select: { id: true } });
     if (!me) return NextResponse.json({ error: "Не найден" }, { status: 404 });
 
     const messages = await db.directMessage.findMany({
@@ -17,21 +17,17 @@ export async function GET() {
         receiver: { select: { id: true, username: true, name: true, avatar: true } },
       },
       orderBy: { sentAt: "desc" },
+      take: 200,
     });
 
-    // Group by conversation partner, keep latest message
     const conversationMap = new Map<string, any>();
     for (const msg of messages) {
       const partner = msg.senderId === me.id ? msg.receiver : msg.sender;
       if (!conversationMap.has(partner.id)) {
-        const unreadCount = messages.filter(
-          (m) => m.senderId === partner.id && m.receiverId === me.id && !m.read
-        ).length;
-        conversationMap.set(partner.id, {
-          partner,
-          lastMessage: msg,
-          unreadCount,
-        });
+        conversationMap.set(partner.id, { partner, lastMessage: msg, unreadCount: 0 });
+      }
+      if (msg.senderId !== me.id && !msg.read) {
+        conversationMap.get(partner.id).unreadCount++;
       }
     }
 
