@@ -82,6 +82,12 @@ export default function MessagesPage() {
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // Lock page scroll — footer makes the page taller than viewport
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
   useEffect(() => {
     fetch("/api/users/me").then(r => r.json()).then(d => { if (!d.error) setDbUser(d); });
     fetchFriends();
@@ -150,8 +156,8 @@ export default function MessagesPage() {
   const totalUnread = conversations.reduce((s, c) => s + c.unreadCount, 0);
 
   return (
-    <div className="min-h-screen bg-cream">
-      <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="bg-cream">
+      <div className="max-w-5xl mx-auto px-4 pt-8 pb-0">
 
         {/* Page header */}
         <div className="flex items-center gap-4 mb-6">
