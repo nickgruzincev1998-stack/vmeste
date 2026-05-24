@@ -55,17 +55,36 @@ export default function DirectChat({ partnerId, currentUserId, partnerName }: Pr
   }, [messages]);
 
   async function handleSend() {
-    if (!input.trim() || sending) return;
+    const text = input.trim();
+    if (!text || sending) return;
+
+    // Оптимистичный UI — показываем сразу
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: DM = {
+      id: tempId,
+      content: text,
+      sentAt: new Date().toISOString(),
+      sender: { id: currentUserId, name: "Вы", avatar: null },
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    setInput("");
     setSending(true);
+
     try {
-      await fetch(`/api/dm/${partnerId}`, {
+      const res = await fetch(`/api/dm/${partnerId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: input.trim() }),
+        body: JSON.stringify({ content: text }),
       });
-      setInput("");
+      const saved = await res.json();
+      // Заменяем временное сообщение реальным
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...saved } : m))
+      );
     } catch {
-      alert("Ошибка отправки");
+      // При ошибке убираем временное
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setInput(text);
     } finally {
       setSending(false);
     }

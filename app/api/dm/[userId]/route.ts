@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { pusherServer } from "@/lib/pusher-server";
 import { createNotification } from "@/lib/notifications";
 import { NextResponse } from "next/server";
@@ -14,42 +14,45 @@ export async function GET(
 ) {
   try {
     const { userId } = await params;
-    const clerkUser = await currentUser();
-    if (!clerkUser) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
+    const { userId: clerkId } = await auth();
+    if (!clerkId) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
-    const me = await db.user.findUnique({ where: { clerkId: clerkUser.id } });
+    const me = await db.user.findUnique({ where: { clerkId }, select: { id: true } });
     if (!me) return NextResponse.json({ error: "Не найден" }, { status: 404 });
 
-    const areFriends = await db.friendship.findFirst({
-      where: {
-        status: "accepted",
-        OR: [
-          { requesterId: me.id, addresseeId: userId },
-          { requesterId: userId, addresseeId: me.id },
-        ],
-      },
-    });
+    const [areFriends, messages] = await Promise.all([
+      db.friendship.findFirst({
+        where: {
+          status: "accepted",
+          OR: [
+            { requesterId: me.id, addresseeId: userId },
+            { requesterId: userId, addresseeId: me.id },
+          ],
+        },
+        select: { id: true },
+      }),
+      db.directMessage.findMany({
+        where: {
+          OR: [
+            { senderId: me.id, receiverId: userId },
+            { senderId: userId, receiverId: me.id },
+          ],
+        },
+        include: { sender: { select: { id: true, name: true, avatar: true } } },
+        orderBy: { sentAt: "asc" },
+        take: 100,
+      }),
+    ]);
+
     if (!areFriends) {
       return NextResponse.json({ error: "Только друзья могут переписываться" }, { status: 403 });
     }
 
-    const messages = await db.directMessage.findMany({
-      where: {
-        OR: [
-          { senderId: me.id, receiverId: userId },
-          { senderId: userId, receiverId: me.id },
-        ],
-      },
-      include: { sender: { select: { id: true, name: true, avatar: true } } },
-      orderBy: { sentAt: "asc" },
-      take: 100,
-    });
-
-    // Mark received messages as read
-    await db.directMessage.updateMany({
+    // Пометить входящие прочитанными — не блокируем ответ
+    db.directMessage.updateMany({
       where: { senderId: userId, receiverId: me.id, read: false },
       data: { read: true },
-    });
+    }).catch(() => {});
 
     return NextResponse.json(messages);
   } catch {
@@ -63,49 +66,60 @@ export async function POST(
 ) {
   try {
     const { userId } = await params;
-    const clerkUser = await currentUser();
-    if (!clerkUser) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
-
-    const me = await db.user.findUnique({ where: { clerkId: clerkUser.id } });
-    if (!me) return NextResponse.json({ error: "Не найден" }, { status: 404 });
-
-    const areFriends = await db.friendship.findFirst({
-      where: {
-        status: "accepted",
-        OR: [
-          { requesterId: me.id, addresseeId: userId },
-          { requesterId: userId, addresseeId: me.id },
-        ],
-      },
-    });
-    if (!areFriends) {
-      return NextResponse.json({ error: "Только друзья могут переписываться" }, { status: 403 });
-    }
+    const { userId: clerkId } = await auth();
+    if (!clerkId) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
 
     const { content } = await req.json();
     if (!content?.trim()) {
       return NextResponse.json({ error: "Пустое сообщение" }, { status: 400 });
     }
 
-    const message = await db.directMessage.create({
-      data: { senderId: me.id, receiverId: userId, content: content.trim() },
-      include: { sender: { select: { id: true, name: true, avatar: true } } },
+    const me = await db.user.findUnique({
+      where: { clerkId },
+      select: { id: true, name: true },
     });
+    if (!me) return NextResponse.json({ error: "Не найден" }, { status: 404 });
 
-    await pusherServer.trigger(dmChannel(me.id, userId), "new-dm", {
+    // Проверка дружбы + создание сообщения параллельно
+    const [areFriends, message] = await Promise.all([
+      db.friendship.findFirst({
+        where: {
+          status: "accepted",
+          OR: [
+            { requesterId: me.id, addresseeId: userId },
+            { requesterId: userId, addresseeId: me.id },
+          ],
+        },
+        select: { id: true },
+      }),
+      db.directMessage.create({
+        data: { senderId: me.id, receiverId: userId, content: content.trim() },
+        include: { sender: { select: { id: true, name: true, avatar: true } } },
+      }),
+    ]);
+
+    if (!areFriends) {
+      return NextResponse.json({ error: "Только друзья могут переписываться" }, { status: 403 });
+    }
+
+    // Pusher + уведомление — не блокируют ответ
+    const payload = {
       id: message.id,
       content: message.content,
       sentAt: message.sentAt,
       read: message.read,
       sender: message.sender,
-    });
+    };
 
-    await createNotification(
-      userId,
-      "new_dm",
-      `Новое сообщение от ${me.name}`,
-      message.content.length > 60 ? message.content.slice(0, 60) + "…" : message.content
-    );
+    Promise.all([
+      pusherServer.trigger(dmChannel(me.id, userId), "new-dm", payload),
+      createNotification(
+        userId,
+        "new_dm",
+        `Новое сообщение от ${me.name}`,
+        message.content.length > 60 ? message.content.slice(0, 60) + "…" : message.content
+      ),
+    ]).catch(console.error);
 
     return NextResponse.json(message);
   } catch {
