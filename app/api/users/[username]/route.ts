@@ -35,15 +35,26 @@ export async function GET(
         activities: {
           orderBy: { createdAt: "desc" },
           take: 6,
-          include: {
-            category: true,
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            placeName: true,
+            difficulty: true,
+            maxParticipants: true,
+            status: true,
+            category: { select: { id: true, name: true, nameRu: true, icon: true, slug: true } },
             _count: { select: { participants: { where: { status: "active" } } } },
           },
         },
         reviewsReceived: {
           orderBy: { createdAt: "desc" },
           take: 10,
-          include: {
+          select: {
+            id: true,
+            rating: true,
+            comment: true,
+            createdAt: true,
             reviewer: { select: { id: true, username: true, name: true, avatar: true } },
           },
         },
