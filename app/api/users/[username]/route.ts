@@ -8,8 +8,8 @@ export async function GET(
 ) {
   try {
     const { username } = await params;
-    const clerkUser = await currentUser();
 
+    // 1. Базовые данные пользователя
     const user = await db.user.findUnique({
       where: { username },
       select: {
@@ -24,40 +24,6 @@ export async function GET(
         xp: true,
         rating: true,
         createdAt: true,
-        _count: {
-          select: {
-            activities: true,
-            friendsInitiated: { where: { status: "accepted" } },
-            friendsReceived:  { where: { status: "accepted" } },
-            reviewsReceived:  true,
-          },
-        },
-        activities: {
-          orderBy: { createdAt: "desc" },
-          take: 6,
-          select: {
-            id: true,
-            title: true,
-            date: true,
-            placeName: true,
-            difficulty: true,
-            maxParticipants: true,
-            status: true,
-            category: { select: { id: true, name: true, nameRu: true, icon: true, slug: true } },
-            _count: { select: { participants: { where: { status: "active" } } } },
-          },
-        },
-        reviewsReceived: {
-          orderBy: { createdAt: "desc" },
-          take: 10,
-          select: {
-            id: true,
-            rating: true,
-            comment: true,
-            createdAt: true,
-            reviewer: { select: { id: true, username: true, name: true, avatar: true } },
-          },
-        },
       },
     });
 
@@ -65,11 +31,48 @@ export async function GET(
       return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 });
     }
 
+    // 2. Все остальные данные параллельно
+    const [friendCount, activityCount, reviewCount, activities, reviews] =
+      await Promise.all([
+        db.friendship.count({
+          where: {
+            status: "accepted",
+            OR: [{ requesterId: user.id }, { addresseeId: user.id }],
+          },
+        }),
+        db.activity.count({ where: { creatorId: user.id } }),
+        db.review.count({ where: { revieweeId: user.id } }),
+        db.activity.findMany({
+          where: { creatorId: user.id },
+          orderBy: { createdAt: "desc" },
+          take: 6,
+          include: {
+            category: true,
+            _count: { select: { participants: { where: { status: "active" } } } },
+          },
+        }),
+        db.review.findMany({
+          where: { revieweeId: user.id },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+          include: {
+            reviewer: {
+              select: { id: true, username: true, name: true, avatar: true },
+            },
+          },
+        }),
+      ]);
+
+    // 3. Статус дружбы с текущим пользователем
     let friendshipStatus: string | null = null;
     let friendshipId: string | null = null;
 
+    const clerkUser = await currentUser();
     if (clerkUser) {
-      const me = await db.user.findUnique({ where: { clerkId: clerkUser.id } });
+      const me = await db.user.findUnique({
+        where: { clerkId: clerkUser.id },
+        select: { id: true },
+      });
       if (me && me.id !== user.id) {
         const friendship = await db.friendship.findFirst({
           where: {
@@ -80,25 +83,28 @@ export async function GET(
           },
         });
         if (friendship) {
-          friendshipStatus = friendship.status;
           friendshipId = friendship.id;
-          if (friendship.status === "pending" && friendship.requesterId === user.id) {
-            friendshipStatus = "incoming";
+          if (friendship.status === "accepted") {
+            friendshipStatus = "accepted";
+          } else if (friendship.status === "pending") {
+            friendshipStatus =
+              friendship.requesterId === me.id ? "pending" : "incoming";
           }
         }
       }
     }
 
-    const friendCount =
-      (user._count.friendsInitiated ?? 0) + (user._count.friendsReceived ?? 0);
-
     return NextResponse.json({
       ...user,
       friendCount,
+      _count: { activities: activityCount, reviewsReceived: reviewCount },
+      activities,
+      reviewsReceived: reviews,
       friendshipStatus,
       friendshipId,
     });
-  } catch {
+  } catch (error) {
+    console.error("[GET /api/users/[username]]", error);
     return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 });
   }
 }
