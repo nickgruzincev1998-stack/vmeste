@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import FriendButton from "@/components/shared/FriendButton";
+import TelegramConnect from "@/components/shared/TelegramConnect";
 
 // ── Level system ──────────────────────────────────────────────────────────────
 
@@ -415,6 +416,9 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
 
       {/* ── BODY ─────────────────────────────────────────────────────────────── */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-8 pb-16 space-y-6">
+
+        {/* ── Telegram connect (own profile only) ── */}
+        {isOwn && <TelegramConnect />}
 
         {/* ── Achievements ── */}
         <section className="bg-white rounded-3xl border border-forest/8 p-5 sm:p-6">

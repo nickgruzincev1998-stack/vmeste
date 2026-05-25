@@ -29,6 +29,8 @@ model User {
   participations  Participation[]
   reviewsGiven    Review[]        @relation("Reviewer")
   reviewsReceived Review[]        @relation("Reviewee")
+  telegramChatId  String?
+
   notifications   Notification[]
   messages        Message[]
 

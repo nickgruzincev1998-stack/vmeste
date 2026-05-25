@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createNotification } from "@/lib/notifications";
 import { grantXP, XP_REWARDS } from "@/lib/xp";
+import { sendTelegramMessage, fmtDate } from "@/lib/telegram";
+
+const SITE_URL = "https://vmeste-tau.vercel.app";
 
 export async function GET(
   req: NextRequest,
@@ -77,6 +80,7 @@ export async function POST(
       where: { id },
       include: {
         _count: { select: { participants: { where: { status: "active" } } } },
+        creator: { select: { telegramChatId: true } },
       },
     });
 
@@ -116,6 +120,18 @@ export async function POST(
       "Новый участник!",
       `${user.name} записался на «${activity.title}»`
     );
+
+    // Telegram уведомление организатору
+    if (activity.creator?.telegramChatId) {
+      sendTelegramMessage(
+        activity.creator.telegramChatId,
+        `👥 <b>${user.name}</b> записался на твоё событие!\n\n` +
+        `⚽ <b>${activity.title}</b>\n` +
+        `📍 ${activity.placeName}\n` +
+        `🕐 ${fmtDate(activity.date)}\n\n` +
+        `Смотреть участников: ${SITE_URL}/activities/${id}`
+      ).catch(console.error);
+    }
 
     // +10 XP за запись на событие
     // +20 XP если впервые участвует в этой категории

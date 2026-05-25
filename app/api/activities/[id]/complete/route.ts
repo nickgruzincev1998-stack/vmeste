@@ -2,6 +2,9 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { grantXP, XP_REWARDS } from "@/lib/xp";
+import { sendTelegramMessage } from "@/lib/telegram";
+
+const SITE_URL = "https://vmeste-tau.vercel.app";
 
 export async function PATCH(
   req: NextRequest,
@@ -24,7 +27,9 @@ export async function PATCH(
       include: {
         participants: {
           where: { status: "active" },
-          select: { userId: true },
+          include: {
+            user: { select: { id: true, telegramChatId: true } },
+          },
         },
       },
     });
@@ -46,11 +51,24 @@ export async function PATCH(
       data: { status: "completed" },
     });
 
-    // +50 XP каждому активному участнику за завершённое событие
+    // +50 XP каждому активному участнику
     const participantIds = activity.participants.map((p) => p.userId);
     await Promise.all(
       participantIds.map((uid) => grantXP(uid, XP_REWARDS.COMPLETE_ACTIVITY))
     );
+
+    // Telegram уведомления всем участникам (fire-and-forget)
+    const tgText =
+      `🏆 <b>Событие завершено!</b>\n\n` +
+      `⚽ <b>${activity.title}</b>\n\n` +
+      `Оцени участников и оставь отзыв:\n` +
+      `${SITE_URL}/activities/${id}/review`;
+
+    for (const p of activity.participants) {
+      if (p.user.telegramChatId) {
+        sendTelegramMessage(p.user.telegramChatId, tgText).catch(console.error);
+      }
+    }
 
     return NextResponse.json({ success: true, activity: updated });
   } catch (error) {
