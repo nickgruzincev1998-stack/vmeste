@@ -268,8 +268,8 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
               <button
                 onClick={() => setShowShare(true)}
                 className="w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-2xl
-                           bg-white/5 hover:bg-white/10 border border-white/10
-                           text-white/60 hover:text-white font-unbounded font-bold text-xs
+                           bg-sand hover:bg-forest/10 border border-forest/15
+                           text-bark hover:text-forest font-unbounded font-bold text-xs
                            transition-all hover:scale-[1.02] active:scale-95"
               >
                 <Share2 size={14} />
