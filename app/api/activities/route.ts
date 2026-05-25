@@ -6,26 +6,37 @@ import { grantXP, XP_REWARDS } from "@/lib/xp";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const category = searchParams.get("category");
-    const city = searchParams.get("city");
+    // Support both `category` (slug) and `cat` (slug) params
+    const categorySlag = searchParams.get("category") || searchParams.get("cat");
+    const city   = searchParams.get("city");
+    const q      = searchParams.get("q");
+    const diff   = searchParams.get("diff");
 
     const activities = await db.activity.findMany({
       where: {
         status: "active",
-        ...(category && { category: { slug: category } }),
+        ...(categorySlag && { category: { slug: categorySlag } }),
         ...(city && { placeName: { contains: city, mode: "insensitive" } }),
+        ...(q    && { title:     { contains: q,    mode: "insensitive" } }),
+        ...(diff && { difficulty: diff }),
       },
       include: {
         creator: {
           select: { id: true, name: true, avatar: true, rating: true },
         },
         category: true,
+        // First 3 participants for avatar stack
+        participants: {
+          take: 3,
+          where: { status: "active" },
+          include: { user: { select: { id: true, name: true, avatar: true } } },
+        },
         _count: {
           select: { participants: { where: { status: "active" } } },
         },
       },
-      orderBy: { createdAt: "desc" },
-      take: 50,
+      orderBy: { date: "asc" }, // nearest first
+      take: 100,
     });
 
     return NextResponse.json(activities);
