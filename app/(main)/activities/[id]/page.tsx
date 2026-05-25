@@ -2,11 +2,12 @@
 
 import ChatRoom from "@/components/chat/ChatRoom";
 import FriendButton from "@/components/shared/FriendButton";
+import ShareModal from "@/components/activity/ShareModal";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { ArrowLeft, Calendar, MapPin, Users, Star, ChevronRight } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Users, Star, ChevronRight, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { use } from "react";
 
@@ -33,6 +34,7 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
   const [completing, setCompleting] = useState(false);
   const [dbUserId, setDbUserId] = useState<string | undefined>(undefined);
   const [friendStatuses, setFriendStatuses] = useState<Record<string, { status: string | null; friendshipId: string | null }>>({});
+  const [showShare, setShowShare] = useState(false);
 
   useEffect(() => {
     fetch(`/api/activities/${id}`)
@@ -262,6 +264,18 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
                 </p>
               )}
 
+              {/* Share button */}
+              <button
+                onClick={() => setShowShare(true)}
+                className="w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-2xl
+                           bg-white/5 hover:bg-white/10 border border-white/10
+                           text-white/60 hover:text-white font-unbounded font-bold text-xs
+                           transition-all hover:scale-[1.02] active:scale-95"
+              >
+                <Share2 size={14} />
+                Поделиться
+              </button>
+
               {isParticipant && activity.status === "completed" && (
                 <Link
                   href={`/activities/${id}/review`}
@@ -355,6 +369,19 @@ export default function ActivityDetailPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
       </div>
+
+      {/* Share modal */}
+      {showShare && activity && (
+        <ShareModal
+          activityId={id}
+          title={activity.title}
+          emoji={activity.category?.icon ?? "🎯"}
+          place={activity.placeName}
+          dateFormatted={formatDate(activity.date)}
+          spotsLeft={spotsLeft}
+          onClose={() => setShowShare(false)}
+        />
+      )}
     </div>
   );
 }
