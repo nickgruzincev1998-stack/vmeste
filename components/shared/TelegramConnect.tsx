@@ -104,7 +104,7 @@ export default function TelegramConnect() {
       </button>
 
       <p className="text-center font-golos text-cream/30 text-[10px] mt-2.5">
-        Откроется бот @{process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "vmeste_bot"} в Telegram
+        Откроется бот @{process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ?? "vmeste_notify_bot"} в Telegram
       </p>
     </div>
   );
